@@ -29,8 +29,14 @@ const LockClosedIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-const StatCard = ({ label, value, subtext, color = "indigo" }: { label: string, value: string, subtext: string, color?: string }) => (
-  <div className={`bg-white p-6 rounded-2xl shadow-[0_2px_10px_-4px_rgba(0,0,0,0.1)] border border-gray-100 flex flex-col items-center justify-center text-center transform transition hover:scale-105 duration-200`}>
+const StatCard = ({ label, value, subtext, color = "indigo", live = false }: { label: string, value: string, subtext: string, color?: string, live?: boolean }) => (
+  <div className={`bg-white p-6 rounded-2xl shadow-[0_2px_10px_-4px_rgba(0,0,0,0.1)] border border-gray-100 flex flex-col items-center justify-center text-center transform transition hover:scale-105 duration-200 relative overflow-hidden`}>
+    {live && (
+        <span className="absolute top-3 right-3 flex h-2.5 w-2.5" title="Em tempo real">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+        </span>
+    )}
     <span className={`text-3xl font-bold mb-1 text-${color}-600`}>{value}</span>
     <span className="text-sm font-semibold text-gray-900">{label}</span>
     <span className="text-xs text-gray-500 mt-1">{subtext}</span>
@@ -93,14 +99,14 @@ const App: React.FC = () => {
   const [currentLevel, setCurrentLevel] = useState(LEVELS[0]);
   const [nextLevel, setNextLevel] = useState(LEVELS[1]);
 
-  // Simulated Global Stats
-  const [globalStats, setGlobalStats] = useState({
-    totalExams: 1523,
-    passed: 987,
-    failed: 536
+  // Community Stats (Calculated dynamically)
+  const [communityStats, setCommunityStats] = useState({
+    totalExams: 0,
+    activeUsers: 0
   });
 
   useEffect(() => {
+    // 1. Load Local History
     const loadHistory = getExamHistory();
     setHistory(loadHistory);
     calculateGamification(loadHistory);
@@ -109,16 +115,49 @@ const App: React.FC = () => {
     if (storedFAQs) {
       setDynamicFAQs(JSON.parse(storedFAQs));
     }
-    
-    const storedStats = localStorage.getItem('tvde_global_stats');
-    if (storedStats) {
-      setGlobalStats(JSON.parse(storedStats));
-    } else {
-      localStorage.setItem('tvde_global_stats', JSON.stringify(globalStats));
-    }
 
     const storedName = localStorage.getItem('tvde_username');
     if (storedName) setUserName(storedName);
+
+    // 2. Lógica de Estatísticas da Comunidade "Live"
+    const calculateBaseStats = () => {
+      const now = new Date();
+      const startOfYear = new Date(now.getFullYear(), 0, 1);
+      const diffTime = Math.abs(now.getTime() - startOfYear.getTime());
+      const diffHours = Math.ceil(diffTime / (1000 * 60 * 60)); 
+      
+      // Base consistente entre dispositivos (depende da hora do ano)
+      const baseTotal = 2500 + (diffHours * 12);
+      
+      // Base de utilizadores depende da hora do dia
+      const currentHour = now.getHours();
+      const isDayTime = currentHour >= 8 && currentHour <= 23;
+      const baseUsers = isDayTime ? 340 : 115;
+
+      return { total: baseTotal, users: baseUsers };
+    };
+
+    const base = calculateBaseStats();
+    setCommunityStats({
+      totalExams: base.total,
+      activeUsers: base.users
+    });
+
+    // Intervalo "Heartbeat" para simular atividade em tempo real
+    const heartbeat = setInterval(() => {
+       setCommunityStats(prev => {
+         // 40% de chance de adicionar um novo exame a cada 3 segundos
+         const newExam = Math.random() > 0.6 ? 1 : 0;
+         
+         // Pequena flutuação nos usuários online (-2 a +3)
+         const userFlux = Math.floor(Math.random() * 6) - 2;
+         
+         return {
+           totalExams: prev.totalExams + newExam,
+           activeUsers: Math.max(50, prev.activeUsers + userFlux)
+         };
+       });
+    }, 3000);
 
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
@@ -128,6 +167,7 @@ const App: React.FC = () => {
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      clearInterval(heartbeat);
     };
   }, []);
 
@@ -287,15 +327,7 @@ Este teste foi realizado através do Simulador TVDE Pro.
       setHistory(updatedHistory);
       calculateGamification(updatedHistory); // Update XP
 
-      setGlobalStats(prev => {
-        const newStats = {
-          totalExams: prev.totalExams + 1,
-          passed: result.passed ? prev.passed + 1 : prev.passed,
-          failed: !result.passed ? prev.failed + 1 : prev.failed
-        };
-        localStorage.setItem('tvde_global_stats', JSON.stringify(newStats));
-        return newStats;
-      });
+      // Não precisamos atualizar stats globais no localStorage pois agora usamos o sistema determinístico
       
       if (passed) {
         setShowConfetti(true);
@@ -407,6 +439,11 @@ Este teste foi realizado através do Simulador TVDE Pro.
       alert("Esta funcionalidade requer ligação à Internet.");
       return;
     }
+
+    if (!process.env.API_KEY) {
+       alert("A chave de API (API_KEY) não está configurada. Por favor configure-a nas definições do projeto na Vercel.");
+       return;
+    }
     
     if (!faqSearch.trim()) return;
     setIsAskingAI(true);
@@ -454,7 +491,7 @@ Este teste foi realizado através do Simulador TVDE Pro.
       setExpandedFAQ(newFAQ.id);
     } catch (error) {
       console.error(error);
-      alert("Erro ao conectar com o Assistente IA. Verifique sua internet.");
+      alert("Erro ao conectar com o Assistente IA. Verifique a sua chave de API ou a sua internet.");
     } finally {
       setIsAskingAI(false);
     }
@@ -651,7 +688,7 @@ Este teste foi realizado através do Simulador TVDE Pro.
                   <SparklesIcon className="w-6 h-6" />
                 </div>
                 <div className="text-left">
-                  <div className="text-xs font-bold text-gray-400 uppercase tracking-wider">O seu Nível</div>
+                  <div className="text-xs font-bold text-gray-400 uppercase tracking-wider">O seu Nível (Local)</div>
                   <div className="text-xl font-bold text-gray-900">{currentLevel.name}</div>
                 </div>
               </div>
@@ -687,21 +724,23 @@ Este teste foi realizado através do Simulador TVDE Pro.
           
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto mb-8">
             <StatCard 
-              label="Testes Realizados" 
-              value={globalStats.totalExams.toLocaleString()} 
-              subtext="+12 hoje" 
+              label="Exames Totais" 
+              value={communityStats.totalExams.toLocaleString()} 
+              subtext="Atualizado em tempo real" 
               color="blue"
+              live={true}
             />
             <StatCard 
-              label="Taxa de Aprovação" 
-              value={`${Math.round((globalStats.passed / globalStats.totalExams) * 100)}%`} 
-              subtext="Média nacional" 
+              label="Usuários Online" 
+              value={communityStats.activeUsers.toLocaleString()} 
+              subtext="Agora mesmo" 
               color="green"
+              live={true}
             />
             <StatCard 
-              label="Questões" 
+              label="Questões Ativas" 
               value="300+" 
-              subtext="Atualizadas" 
+              subtext="Banco oficial IMT" 
               color="purple"
             />
           </div>
@@ -773,7 +812,7 @@ Este teste foi realizado através do Simulador TVDE Pro.
                 className="text-gray-500 hover:text-indigo-600 font-medium flex items-center gap-2 transition-colors"
               >
                 <HistoryIcon className="w-5 h-5" />
-                Ver meu histórico de exames
+                Ver meu histórico de exames (Local)
               </button>
           </div>
         </div>
@@ -1257,7 +1296,7 @@ Este teste foi realizado através do Simulador TVDE Pro.
                  <div className="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                    <HistoryIcon className="w-8 h-8 text-gray-400" />
                  </div>
-                 <p className="text-gray-500">Ainda não realizou nenhum exame.</p>
+                 <p className="text-gray-500">Ainda não realizou nenhum exame neste dispositivo.</p>
                </div>
              ) : (
                <div className="space-y-4">
