@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { AppView, Question, ExamResult, AnswerRecord, EXAM_CONFIG, InfoModule, FAQ } from './types';
 import { MOCK_QUESTIONS, INFO_MODULES, TVDE_FAQS } from './constants';
@@ -8,11 +8,19 @@ import Confetti from './components/Confetti';
 import { 
   ClockIcon, CheckCircleIcon, XCircleIcon, HistoryIcon, PlayIcon, ChevronRightIcon, 
   UserIcon, EyeIcon, BookOpenIcon, InfoIcon, ChevronLeftIcon, LightBulbIcon,
-  ChatBubbleLeftRightIcon, MagnifyingGlassIcon, ChevronDownIcon, ChevronUpIcon, SparklesIcon,
-  ArrowUpIcon, EnvelopeIcon, FlagIcon, Squares2X2Icon, ChartBarIcon, SpeakerWaveIcon,
-  WifiIcon, WifiSlashIcon, PaperAirplaneIcon, HeartIcon, GiftIcon, CreditCardIcon, 
-  QrCodeIcon, ShareIcon, Bars3Icon, XMarkIcon
+  ChatBubbleLeftRightIcon, ChevronDownIcon, ChevronUpIcon, SparklesIcon,
+  ArrowUpIcon, EnvelopeIcon, Squares2X2Icon, ChartBarIcon, SpeakerWaveIcon,
+  PaperAirplaneIcon, HeartIcon, GiftIcon, CreditCardIcon, 
+  ShareIcon, Bars3Icon, XMarkIcon
 } from './components/Icons';
+
+// Declaração para o TypeScript reconhecer process.env
+declare var process: {
+  env: {
+    API_KEY: string;
+    [key: string]: string | undefined;
+  }
+};
 
 // Custom Lock Icon for the disabled state
 const LockClosedIcon = ({ className }: { className?: string }) => (
@@ -68,10 +76,6 @@ const App: React.FC = () => {
   const [dynamicFAQs, setDynamicFAQs] = useState<FAQ[]>([]);
   const [isAskingAI, setIsAskingAI] = useState(false);
 
-  // Innovation Features State
-  const [analyticsData, setAnalyticsData] = useState<Record<string, { total: number, correct: number }>>({});
-  const [smartRecommendation, setSmartRecommendation] = useState<string | null>(null);
-  
   // Connectivity State
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
@@ -99,7 +103,6 @@ const App: React.FC = () => {
   useEffect(() => {
     const loadHistory = getExamHistory();
     setHistory(loadHistory);
-    calculateAnalytics(loadHistory);
     calculateGamification(loadHistory);
     
     const storedFAQs = localStorage.getItem('tvde_dynamic_faqs');
@@ -150,35 +153,6 @@ const App: React.FC = () => {
     }
     setCurrentLevel(level);
     setNextLevel(next);
-  };
-
-  const calculateAnalytics = (hist: ExamResult[]) => {
-    if (hist.length === 0) return;
-
-    const stats: Record<string, { total: number, correct: number }> = {};
-
-    hist.forEach(exam => {
-      exam.mistakes.forEach(m => {
-        const cat = m.question.category;
-        if (!stats[cat]) stats[cat] = { total: 0, correct: 0 };
-        stats[cat].total += 1; // Counting errors
-      });
-    });
-
-    let maxErrors = 0;
-    let worstCategory = '';
-    
-    Object.entries(stats).forEach(([cat, data]) => {
-      if (data.total > maxErrors) {
-        maxErrors = data.total;
-        worstCategory = cat;
-      }
-    });
-
-    setAnalyticsData(stats);
-    if (worstCategory) {
-      setSmartRecommendation(worstCategory);
-    }
   };
 
   const speakQuestion = (text: string, options: string[]) => {
@@ -311,7 +285,6 @@ Este teste foi realizado através do Simulador TVDE Pro.
       
       const updatedHistory = getExamHistory();
       setHistory(updatedHistory);
-      calculateAnalytics(updatedHistory);
       calculateGamification(updatedHistory); // Update XP
 
       setGlobalStats(prev => {
@@ -1389,6 +1362,38 @@ Este teste foi realizado através do Simulador TVDE Pro.
                 ))}
              </div>
            </div>
+        )}
+        {currentView === AppView.INFO_DETAIL && selectedInfoModule && (
+          <div className="max-w-3xl mx-auto animate-fade-in">
+             <button onClick={() => setCurrentView(AppView.INFO_MENU)} className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900">
+               <ChevronLeftIcon className="w-5 h-5" /> Voltar aos Módulos
+             </button>
+             
+             <div className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
+                <div className="bg-indigo-600 p-8 text-white">
+                  <h2 className="text-3xl font-bold">{selectedInfoModule.title}</h2>
+                  <p className="text-indigo-100 mt-2">{selectedInfoModule.description}</p>
+                </div>
+                <div className="p-8 space-y-8">
+                   {selectedInfoModule.content.map((section, idx) => (
+                     <div key={idx} className="bg-gray-50 rounded-2xl p-6 border border-gray-100">
+                        <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
+                          {section.title}
+                        </h3>
+                        <ul className="space-y-3">
+                          {section.text.map((item, i) => (
+                            <li key={i} className="flex items-start gap-3 text-gray-700">
+                               <CheckCircleIcon className="w-5 h-5 text-green-500 shrink-0 mt-0.5" />
+                               <span>{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                     </div>
+                   ))}
+                </div>
+             </div>
+          </div>
         )}
         {currentView === AppView.FAQ_MENU && (
           <div className="max-w-3xl mx-auto animate-fade-in">
