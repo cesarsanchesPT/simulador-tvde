@@ -1067,8 +1067,10 @@ Este teste foi realizado através do Simulador TVDE Pro.
             <ul className="space-y-2 text-sm">
               <li><button onClick={() => setIsSupportOpen(true)} className="hover:text-pink-400 transition-colors flex items-center gap-2"><HeartIcon className="w-4 h-4" /> Apoiar Projeto</button></li>
 
-               <li><a href="mailto:suporte@tvdepro.com" className="hover:text-white transition-colors"> suporte: suporte@tvdepro.com</a></li>
-              
+               <li><a href="mailto:suporte@tvdepro.pt" className="hover:text-white transition-colors flex items-center gap-2">
+                  <EnvelopeIcon className="w-4 h-4" /> suporte@tvdepro.pt
+                </a>
+              </li>
 
               <li><a href="#" className="hover:text-white transition-colors">Termos de Uso</a></li>
               <li><a href="#" className="hover:text-white transition-colors">Política de Privacidade</a></li>
