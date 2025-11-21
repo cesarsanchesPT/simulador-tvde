@@ -10,13 +10,15 @@ import { InfoView } from './views/InfoView';
 import { HistoryView } from './views/HistoryView';
 import { 
   Squares2X2Icon, BookOpenIcon, ChartBarIcon, InfoIcon, ChatBubbleLeftRightIcon, 
-  HeartIcon, XMarkIcon, Bars3Icon, GiftIcon, CreditCardIcon, ShareIcon, ChevronRightIcon,
+  HeartIcon, XMarkIcon, Bars3Icon, GiftIcon, ShareIcon, ChevronRightIcon,
   ArrowUpIcon, EnvelopeIcon
 } from './components/Icons';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<AppView>(AppView.HOME);
   const [lastResult, setLastResult] = useState<ExamResult | null>(null);
+  const [reviewTarget, setReviewTarget] = useState<ExamResult | null>(null);
+  
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -35,6 +37,11 @@ const App: React.FC = () => {
 
   const handleNavigation = (view: AppView) => {
     setIsMobileMenuOpen(false);
+    // Limpar target de review se sairmos da view de histórico
+    if (view !== AppView.HISTORY) {
+      setReviewTarget(null);
+    }
+    
     if (currentView === AppView.EXAM) {
       if (!window.confirm("Sair do exame vai perder o progresso. Continuar?")) return;
     }
@@ -62,7 +69,10 @@ const App: React.FC = () => {
         return lastResult ? (
           <ResultsView 
             result={lastResult} 
-            onReview={() => handleNavigation(AppView.HISTORY)} // History handles reviews now
+            onReview={() => {
+              setReviewTarget(lastResult);
+              handleNavigation(AppView.HISTORY);
+            }} 
             onHome={() => handleNavigation(AppView.HOME)} 
             onHistory={() => handleNavigation(AppView.HISTORY)} 
             onRetry={() => handleNavigation(AppView.EXAM)} 
@@ -73,7 +83,10 @@ const App: React.FC = () => {
       case AppView.INFO_MENU:
         return <InfoView onBack={() => handleNavigation(AppView.HOME)} />;
       case AppView.HISTORY:
-        return <HistoryView onBack={() => handleNavigation(AppView.HOME)} />;
+        return <HistoryView 
+          onBack={() => handleNavigation(AppView.HOME)} 
+          initialReviewResult={reviewTarget}
+        />;
       case AppView.FAQ_MENU:
         return <FAQView onBack={() => handleNavigation(AppView.HOME)} />;
       default:

@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { ExamResult, AppView } from '../types';
+import { ExamResult } from '../types';
 import { CheckCircleIcon, XCircleIcon, EyeIcon, EnvelopeIcon, HistoryIcon, PlayIcon } from '../components/Icons';
 
 interface ResultsViewProps {

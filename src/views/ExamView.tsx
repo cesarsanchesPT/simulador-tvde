@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Question, ExamResult, MistakeRecord, AppView } from '../types';
-import { generateExam, saveExamResult } from '../services/examService';
+import { Question, ExamResult, MistakeRecord } from '../types';
+import { generateExam } from '../services/examService';
 import { EXAM_CONFIG } from '../constants';
 import { generateUUID } from '../utils';
 import { useAuth } from '../contexts/AuthContext';
 import { useStats } from '../contexts/StatsContext';
-import { SpeakerWaveIcon, CheckCircleIcon, XCircleIcon, ChevronLeftIcon, ChevronRightIcon } from '../components/Icons';
+import { SpeakerWaveIcon, CheckCircleIcon, ChevronLeftIcon, ChevronRightIcon } from '../components/Icons';
 import QuizTimer from '../components/QuizTimer';
 
 interface ExamViewProps {
@@ -83,7 +83,6 @@ export const ExamView: React.FC<ExamViewProps> = ({ onFinish, onExit }) => {
   if (isLoading || questions.length === 0) return <div className="p-10 text-center">A preparar exame...</div>;
 
   const q = questions[currentIndex];
-  const isAnswered = answers[currentIndex] !== undefined;
   const isLast = currentIndex === questions.length - 1;
   const answeredCount = Object.keys(answers).length;
 
