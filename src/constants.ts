@@ -1,4 +1,3 @@
-
 import { LegacyQuestion, InfoModule, FAQ } from './types';
 
 export const EXAM_CONFIG = {
@@ -293,6 +292,10 @@ export const MOCK_QUESTIONS: LegacyQuestion[] = [
   { id: 'hp18', question: "Sinal de Stop (Paragem Obrigatória):", options: ["Deve imobilizar totalmente o veículo antes da interseção", "Pode passar devagar se não vier ninguém", "Basta reduzir", "Apenas à noite"], correct: "Deve imobilizar totalmente o veículo antes da interseção", category: "Código da Estrada" },
   { id: 'hp19', question: "O transporte de crianças até 12 anos e <135cm exige:", options: ["Sistema de retenção homologado (cadeirinha/assento) adequado ao tamanho e peso", "Apenas cinto de segurança", "Colo de um adulto", "Banco da frente"], correct: "Sistema de retenção homologado (cadeirinha/assento) adequado ao tamanho e peso", category: "Segurança Rodoviária (PRP)" },
   { id: 'hp20', question: "A 'Gui de Transporte' digital na app é suficiente para fiscalização?", options: ["Sim, a app serve como prova de serviço contratado", "Não, precisa de papel", "Precisa de fatura", "Não"], correct: "Sim, a app serve como prova de serviço contratado", category: "Lei TVDE" },
+
+  // ==========================================
+  // 1. LEI TVDE (LEI 45/2018) - Mantidas
+  // ==========================================
   { id: '1', question: "De acordo com a Lei n.º 45/2018, qual a idade mínima para ser motorista de TVDE?", options: ["18 anos", "21 anos", "25 anos", "23 anos"], correct: "21 anos", category: "Lei TVDE" },
   { id: '2', question: "Qual a validade da licença da plataforma eletrónica TVDE?", options: ["1 ano", "3 anos", "5 anos", "Indeterminada"], correct: "5 anos", category: "Lei TVDE" },
   { id: '3', question: "Qual o documento obrigatório que o motorista de TVDE deve ter sempre consigo no exercício da atividade?", options: ["Cartão de Cidadão", "Fatura de compra do veículo", "Certificado de motorista TVDE", "Comprovativo de morada"], correct: "Certificado de motorista TVDE", category: "Lei TVDE" },
@@ -327,6 +330,10 @@ export const MOCK_QUESTIONS: LegacyQuestion[] = [
   { id: '115', question: "Se um motorista TVDE conduzir com uma taxa de álcool de 0,3 g/l, está:", options: ["Legal", "Cometendo uma contraordenação", "Cometendo um crime", "Depende da hora"], correct: "Cometendo uma contraordenação", category: "Lei TVDE" },
   { id: '116', question: "Os veículos TVDE estão isentos de pagar parquímetros?", options: ["Sim, sempre", "Não, aplicam-se as regras gerais", "Apenas em Lisboa", "Apenas se estiverem a carregar passageiros"], correct: "Não, aplicam-se as regras gerais", category: "Lei TVDE" },
   { id: '117', question: "Quem é o responsável final pelo pagamento das coimas relativas ao Código da Estrada?", options: ["O passageiro", "A plataforma", "O condutor (motorista)", "O dono do carro sempre"], correct: "O condutor (motorista)", category: "Lei TVDE" },
+  
+  // ==========================================
+  // 2. CÓDIGO DA ESTRADA E SEGURANÇA
+  // ==========================================
   { id: '16', question: "Qual a taxa máxima de álcool no sangue (TAS) permitida para um motorista em regime TVDE?", options: ["0.5 g/l", "0.2 g/l", "0.8 g/l", "0.0 g/l"], correct: "0.2 g/l", category: "Código da Estrada" },
   { id: '17', question: "Numa via com o sinal de 'Proibição de Estacionar', a paragem é permitida?", options: ["Não, a paragem e o estacionamento são proibidos", "Sim, desde que não exceda 5 minutos", "Sim, apenas para entrada ou saída de passageiros", "Apenas fora das localidades"], correct: "Sim, apenas para entrada ou saída de passageiros", category: "Código da Estrada" },
   { id: '18', question: "O que indica um triângulo de pré-sinalização de perigo na estrada?", options: ["Aconselha a redução da velocidade", "Indica o local de um acidente ou avaria", "Marca a prioridade na intersecção", "Proíbe a ultrapassagem"], correct: "Indica o local de um acidente ou avaria", category: "Código da Estrada" },
@@ -358,6 +365,10 @@ export const MOCK_QUESTIONS: LegacyQuestion[] = [
   { id: '126', question: "Nas rotundas, os condutores de veículos de tração animal ou velocípedes podem usar a via exterior?", options: ["Não", "Sim, podem usar a via exterior independentemente da saída", "Apenas se forem sair na 1ª", "Só se a rotunda estiver vazia"], correct: "Sim, podem usar a via exterior independentemente da saída", category: "Código da Estrada" },
   { id: '127', question: "O que significa a luz azul num veículo de emergência?", options: ["Marcha de urgência", "Avaria", "Transporte de valores", "Limpeza de via"], correct: "Marcha de urgência", category: "Código da Estrada" },
   { id: '128', question: "A utilização de luzes de nevoeiro traseiras é obrigatória?", options: ["Sempre que chove", "Apenas em caso de nevoeiro intenso que reduza a visibilidade", "À noite", "Em túneis"], correct: "Apenas em caso de nevoeiro intenso que reduza a visibilidade", category: "Código da Estrada" },
+
+  // ==========================================
+  // 3. COMUNICAÇÃO, TURISMO E GEOGRAFIA (TVDE)
+  // ==========================================
   { id: '26', question: "Qual a melhor forma de reagir a um passageiro que está a queixar-se do trânsito?", options: ["Ignorar a queixa", "Culpar a Câmara Municipal pelo trânsito", "Mostrar empatia, reconhecer o problema e focar no destino", "Fazer uma reclamação à plataforma sobre o passageiro"], correct: "Mostrar empatia, reconhecer o problema e focar no destino", category: "Comunicação e Turismo" },
   { id: '27', question: "Qual o tom de voz mais adequado ao interagir com um passageiro?", options: ["Autoritário e rápido", "Monótono e formal", "Calmo, audível e profissional", "Informal e excessivamente entusiasta"], correct: "Calmo, audível e profissional", category: "Comunicação e Turismo" },
   { id: '28', question: "Se um passageiro estiver a fazer uma chamada importante, o motorista deve:", options: ["Ligar o rádio mais alto para não ouvir", "Participar na conversa", "Manter o silêncio no habitáculo e conduzir discretamente", "Perguntar sobre a chamada"], correct: "Manter o silêncio no habitáculo e conduzir discretamente", category: "Comunicação e Turismo" },
@@ -374,6 +385,7 @@ export const MOCK_QUESTIONS: LegacyQuestion[] = [
   { id: '53', question: "O que fazer em caso de conflito com outro condutor na estrada?", options: ["Sair do carro e discutir", "Buzinar insistentemente", "Manter a calma, não reagir a provocações e focar na segurança do passageiro", "Perseguir o outro condutor"], correct: "Manter a calma, não reagir a provocações e focar na segurança do passageiro", category: "Comunicação e Turismo" },
   { id: '54', question: "A ventilação e temperatura do veículo devem ser:", options: ["Ao gosto do motorista", "Sempre desligadas para poupar", "Ajustadas de acordo com o conforto do passageiro", "Sempre no máximo"], correct: "Ajustadas de acordo com o conforto do passageiro", category: "Comunicação e Turismo" },
   { id: '55', question: "O rádio deve estar:", options: ["No volume máximo", "Em estações de debate político", "Desligado ou em volume baixo/moderado, segundo a preferência do passageiro", "Sintonizado em notícias apenas"], correct: "Desligado ou em volume baixo/moderado, segundo a preferência do passageiro", category: "Comunicação e Turismo" },
+  // GEOGRAFIA E TURISMO
   { id: '129', question: "O Aeroporto Humberto Delgado situa-se em que cidade?", options: ["Porto", "Faro", "Lisboa", "Funchal"], correct: "Lisboa", category: "Comunicação e Turismo" },
   { id: '130', question: "Onde se localiza a Torre dos Clérigos?", options: ["Lisboa", "Coimbra", "Porto", "Braga"], correct: "Porto", category: "Comunicação e Turismo" },
   { id: '131', question: "Qual destas estações de comboio serve o centro de Lisboa?", options: ["Campanhã", "São Bento", "Santa Apolónia", "Devesas"], correct: "Santa Apolónia", category: "Comunicação e Turismo" },
@@ -390,6 +402,10 @@ export const MOCK_QUESTIONS: LegacyQuestion[] = [
   { id: '142', question: "Onde fica localizado o Casino Estoril?", options: ["Lisboa", "Cascais", "Estoril", "Sintra"], correct: "Estoril", category: "Comunicação e Turismo" },
   { id: '143', question: "A 'Baixa Pombalina' é o centro histórico de:", options: ["Porto", "Lisboa", "Guimarães", "Braga"], correct: "Lisboa", category: "Comunicação e Turismo" },
   { id: '144', question: "Se um turista quiser ir às 'Caves do Vinho do Porto', deve atravessar a ponte para:", options: ["Matosinhos", "Vila Nova de Gaia", "Maia", "Gondomar"], correct: "Vila Nova de Gaia", category: "Comunicação e Turismo" },
+  
+  // ==========================================
+  // 4. INGLÊS TÉCNICO PARA MOTORISTAS
+  // ==========================================
   { id: '145', question: "Se um passageiro disser 'Please turn left', deve virar para a:", options: ["Direita", "Esquerda", "Frente", "Trás"], correct: "Esquerda", category: "Inglês Técnico" },
   { id: '146', question: "A palavra 'Airport' significa:", options: ["Porto", "Estação", "Aeroporto", "Hospital"], correct: "Aeroporto", category: "Inglês Técnico" },
   { id: '147', question: "Se o passageiro disser 'Slow down', deve:", options: ["Acelerar", "Parar", "Reduzir a velocidade", "Buzinar"], correct: "Reduzir a velocidade", category: "Inglês Técnico" },
@@ -400,6 +416,10 @@ export const MOCK_QUESTIONS: LegacyQuestion[] = [
   { id: '152', question: "Se o passageiro disser 'Straight ahead', deve:", options: ["Virar à direita", "Virar à esquerda", "Seguir em frente", "Inverter a marcha"], correct: "Seguir em frente", category: "Inglês Técnico" },
   { id: '153', question: "A palavra 'Cash' refere-se a:", options: ["Cartão de crédito", "Dinheiro vivo", "Multibanco", "App"], correct: "Dinheiro vivo", category: "Inglês Técnico" },
   { id: '154', question: "Se disserem 'Stop here, please', deve:", options: ["Continuar", "Acelerar", "Parar aqui", "Voltar para trás"], correct: "Parar aqui", category: "Inglês Técnico" },
+
+  // ==========================================
+  // 5. PRIMEIROS SOCORROS (BÁSICO E AVANÇADO)
+  // ==========================================
   { id: '56', question: "Qual o número europeu de emergência?", options: ["112", "911", "115", "118"], correct: "112", category: "Segurança e Socorro" },
   { id: '57', question: "Em caso de acidente, qual a ordem correta de atuação (PAS)?", options: ["Socorrer, Prevenir, Alertar", "Prevenir, Alertar, Socorrer", "Alertar, Prevenir, Socorrer", "Fugir, Ligar, Esperar"], correct: "Prevenir, Alertar, Socorrer", category: "Segurança e Socorro" },
   { id: '58', question: "O que é a Posição Lateral de Segurança (PLS)?", options: ["Posição de condução", "Posição para dormir", "Posição para colocar vítimas inconscientes que respiram", "Posição para vítimas com fraturas na coluna"], correct: "Posição para colocar vítimas inconscientes que respiram", category: "Segurança e Socorro" },
@@ -413,6 +433,10 @@ export const MOCK_QUESTIONS: LegacyQuestion[] = [
   { id: '158', question: "O que deve dizer ao ligar para o 112?", options: ["Desligar rápido", "Localização exata, tipo de ocorrência e número de vítimas", "Apenas o nome", "Pedir reboque"], correct: "Localização exata, tipo de ocorrência e número de vítimas", category: "Segurança e Socorro" },
   { id: '159', question: "Em caso de choque elétrico (veículo contra poste), a primeira atitude é:", options: ["Tocar na vítima", "Garantir que a corrente foi cortada antes de tocar no veículo ou vítima", "Atirar água", "Fugir"], correct: "Garantir que a corrente foi cortada antes de tocar no veículo ou vítima", category: "Segurança e Socorro" },
   { id: '160', question: "O kit de primeiros socorros é obrigatório no TVDE?", options: ["Não", "Sim, recomendável", "A lei não especifica, mas o triângulo e colete são obrigatórios", "Apenas compressas"], correct: "A lei não especifica, mas o triângulo e colete são obrigatórios", category: "Segurança e Socorro" },
+
+  // ==========================================
+  // 6. MECÂNICA E ECO-CONDUÇÃO
+  // ==========================================
   { id: '71', question: "O que é a Eco-condução?", options: ["Conduzir apenas carros elétricos", "Uma forma de condução eficiente que reduz o consumo e a sinistralidade", "Conduzir sempre a 30 km/h", "Desligar o motor nas descidas"], correct: "Uma forma de condução eficiente que reduz o consumo e a sinistralidade", category: "Mecânica e Eco-condução" },
   { id: '72', question: "Qual a pressão correta dos pneus?", options: ["Sempre 30 PSI", "A indicada pelo fabricante do veículo", "A máxima que o pneu aguentar", "Quanto menos, melhor aderência"], correct: "A indicada pelo fabricante do veículo", category: "Mecânica e Eco-condução" },
   { id: '73', question: "Para poupar combustível, as mudanças de velocidade devem ser feitas:", options: ["No red line", "A baixas rotações", "Sempre na primeira velocidade", "Saltando mudanças"], correct: "A baixas rotações", category: "Mecânica e Eco-condução" },
@@ -433,6 +457,10 @@ export const MOCK_QUESTIONS: LegacyQuestion[] = [
   { id: '163', question: "O que é o ESP?", options: ["Controlo Eletrónico de Estabilidade", "Sistema de Parqueamento", "Direção Assistida", "Espelho Panorâmico"], correct: "Controlo Eletrónico de Estabilidade", category: "Mecânica e Eco-condução" },
   { id: '164', question: "Pneus 'carecas' (sem piso) aumentam o risco de:", options: ["Furo", "Aquaplaning e perda de aderência", "Consumo", "Ruído"], correct: "Aquaplaning e perda de aderência", category: "Mecânica e Eco-condução" },
   { id: '165', question: "Em veículos diesel, a luz da 'mola' (aquecimento) serve para:", options: ["Indicar pré-aquecimento das velas antes do arranque", "Amortecedores", "Travões", "Turbo"], correct: "Indicar pré-aquecimento das velas antes do arranque", category: "Mecânica e Eco-condução" },
+
+  // ==========================================
+  // 7. SEGURANÇA RODOVIÁRIA (PRP/IMT AVANÇADO)
+  // ==========================================
   { id: '86', question: "Qual é o tempo médio de reação de um condutor em estado normal?", options: ["0,1 segundos", "0,5 segundos", "1 segundo", "2 segundos"], correct: "1 segundo", category: "Segurança Rodoviária (PRP)" },
   { id: '87', question: "A distância de paragem é a soma de:", options: ["Distância de reação + Distância de travagem", "Distância de reação + Distância de segurança", "Distância de travagem + Comprimento do veículo", "Apenas a distância de travagem"], correct: "Distância de reação + Distância de travagem", category: "Segurança Rodoviária (PRP)" },
   { id: '88', question: "Se duplicar a velocidade, a distância de travagem aumenta aproximadamente:", options: ["2 vezes", "3 vezes", "4 vezes", "Não altera"], correct: "4 vezes", category: "Segurança Rodoviária (PRP)" },
