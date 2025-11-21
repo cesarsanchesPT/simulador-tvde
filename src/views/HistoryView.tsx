@@ -1,15 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStats } from '../contexts/StatsContext';
 import { ExamResult } from '../types';
 import { ChevronLeftIcon, HistoryIcon, CheckCircleIcon, XCircleIcon, ChevronRightIcon, SparklesIcon } from '../components/Icons';
 
-interface HistoryViewProps {
+export interface HistoryViewProps {
   onBack: () => void;
+  initialReviewResult?: ExamResult | null;
 }
 
-export const HistoryView: React.FC<HistoryViewProps> = ({ onBack }) => {
+export const HistoryView: React.FC<HistoryViewProps> = ({ onBack, initialReviewResult }) => {
   const { history } = useStats();
   const [reviewData, setReviewData] = useState<ExamResult | null>(null);
+
+  // Se recebermos um resultado inicial (vindo da tela de resultados), abrimos logo
+  useEffect(() => {
+    if (initialReviewResult) {
+      setReviewData(initialReviewResult);
+    }
+  }, [initialReviewResult]);
 
   if (reviewData) {
     return (
