@@ -1,6 +1,6 @@
 import React from 'react';
 import { ExamResult } from '../types';
-import { CheckCircleIcon, XCircleIcon, EyeIcon, EnvelopeIcon, HistoryIcon, PlayIcon } from '../components/Icons';
+import { CheckCircleIcon, XCircleIcon, EyeIcon, EnvelopeIcon, HistoryIcon, PlayIcon, LightBulbIcon, ChartBarIcon } from '../components/Icons';
 
 interface ResultsViewProps {
   result: ExamResult;
@@ -12,6 +12,16 @@ interface ResultsViewProps {
 
 export const ResultsView: React.FC<ResultsViewProps> = ({ result, onReview, onHome, onHistory, onRetry }) => {
   const percentage = Math.round((result.score / result.total) * 100);
+
+  // Calcular categoria com mais erros
+  const mistakesByCategory = result.mistakes.reduce((acc, mistake) => {
+    const cat = mistake.question.category || 'Geral';
+    acc[cat] = (acc[cat] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const worstCategory = Object.entries(mistakesByCategory).sort(([,a], [,b]) => b - a)[0];
+  const [categoryName, errorCount] = worstCategory || [null, 0];
 
   const shareResultByEmail = () => {
     const subject = `Resultado Exame TVDE: ${result.passed ? 'APROVADO' : 'REPROVADO'}`;
@@ -60,6 +70,36 @@ Este teste foi realizado através do Simulador TVDE Pro.
               <div className="text-sm font-medium text-gray-500 uppercase tracking-wide">Percentagem</div>
             </div>
           </div>
+
+          {/* Análise de Desempenho Rápida */}
+          {categoryName && errorCount > 0 && (
+            <div className="bg-orange-50 border border-orange-100 rounded-2xl p-4 mb-8 text-left flex items-start gap-4">
+              <div className="bg-orange-100 p-2 rounded-lg text-orange-600 shrink-0">
+                <LightBulbIcon className="w-6 h-6" />
+              </div>
+              <div>
+                <h4 className="font-bold text-gray-900 text-sm uppercase tracking-wide mb-1">Área de Melhoria</h4>
+                <p className="text-gray-600 text-sm">
+                  Notámos que teve mais dificuldades em <span className="font-bold text-orange-700">{categoryName}</span> ({errorCount} erros). 
+                  Sugerimos rever este módulo antes do próximo exame.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {result.mistakes.length === 0 && (
+             <div className="bg-green-50 border border-green-100 rounded-2xl p-4 mb-8 text-left flex items-start gap-4">
+              <div className="bg-green-100 p-2 rounded-lg text-green-600 shrink-0">
+                <ChartBarIcon className="w-6 h-6" />
+              </div>
+              <div>
+                <h4 className="font-bold text-gray-900 text-sm uppercase tracking-wide mb-1">Desempenho Perfeito</h4>
+                <p className="text-gray-600 text-sm">
+                  Não cometeu nenhum erro! Está preparado para o exame oficial.
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="flex flex-col gap-3">
             <button
