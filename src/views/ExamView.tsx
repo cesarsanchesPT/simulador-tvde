@@ -40,7 +40,6 @@ export const ExamView: React.FC<ExamViewProps> = ({
       const newQuestions = generateExam(categoryId);
       
       // Ajustar número de questões se a categoria for específica
-      // O generateExam já deve retornar o pool correto, mas fazemos slice para garantir
       const finalQuestions = newQuestions.slice(0, totalQuestions);
 
       setQuestions(finalQuestions);
@@ -69,9 +68,8 @@ export const ExamView: React.FC<ExamViewProps> = ({
       return acc;
     }, [] as MistakeRecord[]);
 
-    // Calcular aprovação com base numa percentagem fixa (ex: 90%) ou regra
-    // Regra base: Passa se errar menos de 3 em 30 (10%). 
-    // Nota: Oficialmente TVDE é 27/30. Código B é 27/30. 
+    // Calcular aprovação. 
+    // Regra: Passa se acertar pelo menos (Total - 3). Ex: 27 em 30.
     const passed = score >= (questions.length - 3) && !isTimeout;
 
     const result: ExamResult = {
