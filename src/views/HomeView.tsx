@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useStats } from '../contexts/StatsContext';
 import { AVAILABLE_EXAMS } from '../data/examRegistry';
 import { ExamCategory } from '../types';
-import { GiftIcon, Squares2X2Icon, BookOpenIcon, SpeakerWaveIcon, ChartBarIcon, HeartIcon, ChevronRightIcon, LightBulbIcon, ArrowUpIcon, UserIcon, ClockIcon } from '../components/Icons';
+import { GiftIcon, Squares2X2Icon, BookOpenIcon, SpeakerWaveIcon, ChartBarIcon, HeartIcon, ChevronRightIcon, LightBulbIcon, ArrowUpIcon, UserIcon, ClockIcon, LogoutIcon } from '../components/Icons';
 
 // Simple Icon Mapper
 const IconMap: Record<string, any> = {
@@ -39,9 +39,15 @@ interface HomeViewProps {
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({ onSelectCategory, onOpenSupport, onOpenStudy }) => {
-  const { user, login, upgradeToPremium } = useAuth();
+  const { user, login, upgradeToPremium, logout } = useAuth();
   const { stats, globalStats } = useStats();
   const [inputName, setInputName] = React.useState('');
+
+  const handleLogout = () => {
+    if (window.confirm("Deseja trocar de utilizador?")) {
+      logout();
+    }
+  };
 
   // TELA DE LOGIN SIMPLIFICADA
   if (!user) {
@@ -93,9 +99,18 @@ export const HomeView: React.FC<HomeViewProps> = ({ onSelectCategory, onOpenSupp
                 <span className="w-2 h-2 rounded-full bg-green-400"></span>
                 {globalStats.activeUsers} motoristas a estudar agora
              </div>
-             <h1 className="text-4xl sm:text-5xl font-black mb-4 tracking-tight">
-               Olá, <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 to-purple-300">{user.name}</span>
-             </h1>
+             <div className="flex items-center gap-3 mb-4">
+                <h1 className="text-4xl sm:text-5xl font-black tracking-tight">
+                  Olá, <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 to-purple-300">{user.name}</span>
+                </h1>
+                <button 
+                  onClick={handleLogout}
+                  className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white/60 hover:text-white transition-colors"
+                  title="Sair / Trocar Conta"
+                >
+                  <LogoutIcon className="w-5 h-5" />
+                </button>
+             </div>
              <p className="text-gray-400 text-lg max-w-md leading-relaxed">
                Junte-se à comunidade. Já foram realizados <span className="text-white font-bold">{globalStats.totalExams.toLocaleString()}</span> exames simulados na nossa plataforma.
              </p>

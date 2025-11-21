@@ -9,10 +9,11 @@ import { ResultsView } from './views/ResultsView';
 import { StudyView } from './views/StudyView';
 import { InfoView } from './views/InfoView';
 import { HistoryView } from './views/HistoryView';
+import { useAuth } from './contexts/AuthContext';
 import { 
   Squares2X2Icon, BookOpenIcon, ChartBarIcon, InfoIcon, ChatBubbleLeftRightIcon, 
   HeartIcon, XMarkIcon, Bars3Icon, GiftIcon, ShareIcon, ChevronRightIcon,
-  ArrowUpIcon, EnvelopeIcon
+  ArrowUpIcon, EnvelopeIcon, LogoutIcon
 } from './components/Icons';
 
 const App: React.FC = () => {
@@ -25,6 +26,8 @@ const App: React.FC = () => {
   const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+
+  const { logout, user } = useAuth();
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -49,6 +52,14 @@ const App: React.FC = () => {
     }
     setCurrentView(view);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleLogout = () => {
+    if (window.confirm("Tem a certeza que deseja terminar sessão?")) {
+      logout();
+      setIsMobileMenuOpen(false);
+      setCurrentView(AppView.HOME);
+    }
   };
 
   const renderContent = () => {
@@ -147,12 +158,15 @@ const App: React.FC = () => {
             <HeartIcon className="w-4 h-4" />
             Apoiar
           </button>
-          <div className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 ${
-            isOnline ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-          }`}>
-            <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`}></span>
-            {isOnline ? 'Online' : 'Offline'}
-          </div>
+          {user && (
+            <button 
+              onClick={handleLogout}
+              className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+              title="Terminar Sessão"
+            >
+              <LogoutIcon className="w-5 h-5" />
+            </button>
+          )}
         </div>
 
         <div className="md:hidden flex items-center gap-3">
@@ -195,6 +209,20 @@ const App: React.FC = () => {
                 {item.label}
               </button>
             ))}
+            {user && (
+              <>
+                <div className="h-px bg-gray-100 my-1"></div>
+                <button
+                  onClick={handleLogout}
+                  className="w-full px-4 py-3 text-left rounded-xl text-sm font-medium flex items-center gap-3 text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  <div className="p-1.5 rounded-lg bg-red-100">
+                     <LogoutIcon className="w-4 h-4" />
+                  </div>
+                  Terminar Sessão
+                </button>
+              </>
+            )}
           </div>
         </>
       )}
