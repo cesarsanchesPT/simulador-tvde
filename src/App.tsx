@@ -106,6 +106,53 @@ const App: React.FC = () => {
   });
 
   useEffect(() => {
+
+
+      // Sincronização em Tempo Real entre Separadores
+    const handleStorageChange = (event: StorageEvent) => {
+
+      // 1. Se outra aba atualizou as estatísticas globais (contagem de testes)
+      if (event.key === 'tvde_global_stats' && event.newValue) {
+        setGlobalStats(JSON.parse(event.newValue));
+      }
+
+      // 2. Se outra aba guardou um novo histórico de exame
+      if (event.key === 'tvde_exam_history_v2') {
+         const newHistory = getExamHistory();
+         setHistory(newHistory);
+         calculateAnalytics(newHistory);
+      }
+    };
+
+    // Adicionar os ouvintes de eventos do navegador
+    window.addEventListener('storage', handleStorageChange);
+
+    // (Opcional) Detetar se a internet caiu ou voltou
+    window.addEventListener('online', () => setIsOnline(true));
+    window.addEventListener('offline', () => setIsOnline(false));
+
+    // Limpeza: remover ouvintes quando a app fecha para não dar erro
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('online', () => setIsOnline(true));
+      window.removeEventListener('offline', () => setIsOnline(false));
+    };
+
+// Atualizar estatísticas locais e "avisar" as outras abas via localStorage
+    setGlobalStats(prev => {
+      const newStats = {
+        totalExams: prev.totalExams + 1,
+        passed: result.passed ? prev.passed + 1 : prev.passed,
+        failed: !result.passed ? prev.failed + 1 : prev.failed
+      };
+
+      // ESTA LINHA é que faz a magia acontecer nas outras abas:
+      localStorage.setItem('tvde_global_stats', JSON.stringify(newStats));
+
+      return newStats;
+    });
+
+
     // 1. Load Local History
     const loadHistory = getExamHistory();
     setHistory(loadHistory);
