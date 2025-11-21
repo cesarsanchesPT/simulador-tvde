@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Question, ExamResult, MistakeRecord } from '../types';
 import { generateExam } from '../services/examService';
@@ -9,11 +10,12 @@ import { SpeakerWaveIcon, CheckCircleIcon, ChevronLeftIcon, ChevronRightIcon } f
 import QuizTimer from '../components/QuizTimer';
 
 interface ExamViewProps {
+  examTitle?: string;
   onFinish: (result: ExamResult) => void;
   onExit: () => void;
 }
 
-export const ExamView: React.FC<ExamViewProps> = ({ onFinish, onExit }) => {
+export const ExamView: React.FC<ExamViewProps> = ({ examTitle = "Exame TVDE", onFinish, onExit }) => {
   const { user } = useAuth();
   const { addResult } = useStats();
   
@@ -85,26 +87,36 @@ export const ExamView: React.FC<ExamViewProps> = ({ onFinish, onExit }) => {
   const q = questions[currentIndex];
   const isLast = currentIndex === questions.length - 1;
   const answeredCount = Object.keys(answers).length;
+  const progressPercent = ((currentIndex + 1) / questions.length) * 100;
 
   return (
     <div className="max-w-3xl mx-auto pb-24 animate-fade-in pt-4">
       {/* Header Bar */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 mb-6 flex flex-wrap gap-4 items-center justify-between sticky top-20 z-30">
-        <div className="flex items-center gap-3">
-          <button onClick={handleExitConfirm} className="p-2 hover:bg-gray-100 rounded-full text-gray-500">
-            <ChevronLeftIcon className="w-5 h-5" />
-          </button>
-          <div className="bg-indigo-100 text-indigo-700 w-10 h-10 rounded-full flex items-center justify-center font-bold">
-            {currentIndex + 1}
+        <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
+          <div className="flex items-center gap-3">
+             <button onClick={handleExitConfirm} className="p-2 hover:bg-gray-100 rounded-full text-gray-500">
+               <ChevronLeftIcon className="w-5 h-5" />
+             </button>
+             <div>
+               <div className="text-xs font-bold text-indigo-600 uppercase tracking-wide">{examTitle}</div>
+               <div className="text-sm font-bold text-gray-600">
+                  Q. {currentIndex + 1} <span className="text-gray-400 font-normal">/ {questions.length}</span>
+               </div>
+             </div>
           </div>
-          <div className="text-sm text-gray-500">de {questions.length}</div>
+          <div className="sm:hidden">
+             <QuizTimer secondsLeft={timeLeft} setSecondsLeft={setTimeLeft} onTimeUp={() => handleFinish(true)} />
+          </div>
         </div>
 
-        <div className="hidden sm:flex items-center gap-2 text-sm text-gray-500 bg-gray-50 px-3 py-1 rounded-lg">
-          <span className="font-bold text-indigo-600">{answeredCount}</span> respondidas
+        <div className="hidden sm:flex flex-1 mx-4 h-2 bg-gray-100 rounded-full overflow-hidden">
+           <div className="h-full bg-indigo-500 transition-all duration-300" style={{ width: `${progressPercent}%` }}></div>
         </div>
 
-        <QuizTimer secondsLeft={timeLeft} setSecondsLeft={setTimeLeft} onTimeUp={() => handleFinish(true)} />
+        <div className="hidden sm:block">
+           <QuizTimer secondsLeft={timeLeft} setSecondsLeft={setTimeLeft} onTimeUp={() => handleFinish(true)} />
+        </div>
       </div>
 
       {/* Question Card */}

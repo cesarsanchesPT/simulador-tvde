@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { AppView, ExamResult } from './types';
+import { AppView, ExamResult, ExamCategory } from './types';
 import Confetti from './components/Confetti';
 import { HomeView } from './views/HomeView';
 import { FAQView } from './views/FAQView';
@@ -18,6 +19,7 @@ const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<AppView>(AppView.HOME);
   const [lastResult, setLastResult] = useState<ExamResult | null>(null);
   const [reviewTarget, setReviewTarget] = useState<ExamResult | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<ExamCategory | null>(null);
   
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isSupportOpen, setIsSupportOpen] = useState(false);
@@ -52,10 +54,20 @@ const App: React.FC = () => {
   const renderContent = () => {
     switch (currentView) {
       case AppView.HOME:
-        return <HomeView onSelectCategory={() => handleNavigation(AppView.EXAM)} onOpenSupport={() => setIsSupportOpen(true)} />;
+        return (
+          <HomeView 
+            onSelectCategory={(cat) => {
+              setSelectedCategory(cat);
+              handleNavigation(AppView.EXAM);
+            }} 
+            onOpenSupport={() => setIsSupportOpen(true)} 
+            onOpenStudy={() => handleNavigation(AppView.STUDY_MENU)}
+          />
+        );
       case AppView.EXAM:
         return (
           <ExamView 
+            examTitle={selectedCategory?.title || 'Exame Geral TVDE'}
             onFinish={(result) => {
               setLastResult(result);
               if(result.passed) { setShowConfetti(true); setTimeout(() => setShowConfetti(false), 5000); }
