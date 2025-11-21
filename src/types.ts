@@ -1,31 +1,29 @@
 
 export type ExamMode = 'EXAM' | 'STUDY' | 'REVIEW';
 
-export enum AppView {
-  HOME = 'HOME',
-  EXAM = 'EXAM',
-  RESULTS = 'RESULTS',
-  HISTORY = 'HISTORY',
-  REVIEW = 'REVIEW',
-  STUDY_MENU = 'STUDY_MENU',
-  STUDY_SESSION = 'STUDY_SESSION',
-  INFO_MENU = 'INFO_MENU',
-  INFO_DETAIL = 'INFO_DETAIL',
-  FAQ_MENU = 'FAQ_MENU'
+export interface ExamCategory {
+  id: string;
+  title: string;
+  description: string;
+  icon: string; // Icon name
+  totalQuestions: number; // Pool size
+  examDurationMinutes: number;
+  passScore: number;
+  questionsPerExam: number;
+  isPremium: boolean; // If true, requires premium account
 }
 
-// New Engine Question Type (Future Proofing)
 export interface Question {
   id: string;
   text: string;
   options: string[];
-  correctIndex: number;
+  correctIndex: number; // Changed from string comparison to index for robustness
   explanation?: string;
-  category: string;
+  category: string; // Internal topic (e.g., "Mecânica", "Legislação")
   imageUrl?: string;
 }
 
-// Legacy Question type (Current Data Structure)
+// Legacy Question type for backward compatibility with constants.ts
 export interface LegacyQuestion {
   id: string;
   question: string;
@@ -35,18 +33,14 @@ export interface LegacyQuestion {
   imageUrl?: string;
 }
 
-export interface LegacyAnswerRecord {
-  question: LegacyQuestion;
-  selectedAnswer: string;
-  isCorrect: boolean;
-}
-
-// New Engine Answer Record
 export interface AnswerRecord {
   questionId: string;
   selectedOptionIndex: number;
   isCorrect: boolean;
   timestamp: number;
+  // Legacy support
+  question?: LegacyQuestion;
+  selectedAnswer?: string;
 }
 
 export interface ExamSession {
@@ -54,9 +48,9 @@ export interface ExamSession {
   categoryId: string;
   mode: ExamMode;
   startTime: number;
-  endTime: number;
-  answers: Record<string, AnswerRecord>;
-  questions: Question[];
+  endTime?: number;
+  answers: Record<string, AnswerRecord>; // Map questionId -> Answer
+  questions: Question[]; // The specific subset for this session
   score: number;
   passed: boolean;
 }
@@ -69,7 +63,11 @@ export interface ExamResult {
   total: number;
   passed: boolean;
   isTimeout: boolean;
-  mistakes: LegacyAnswerRecord[];
+  mistakes: {
+    question: LegacyQuestion;
+    selectedAnswer: string;
+    isCorrect: boolean;
+  }[];
 }
 
 export interface InfoModule {
@@ -103,17 +101,5 @@ export interface UserProfile {
   name: string;
   email?: string;
   isPremium: boolean;
-  institutionCode?: string; 
-}
-
-export interface ExamCategory {
-  id: string;
-  title: string;
-  description: string;
-  icon: string;
-  totalQuestions: number;
-  examDurationMinutes: number;
-  passScore: number;
-  questionsPerExam: number;
-  isPremium: boolean;
+  institutionCode?: string; // For driving schools
 }
