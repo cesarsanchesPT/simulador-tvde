@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Question, ExamResult, MistakeRecord } from '../types';
 import { generateExam } from '../services/examService';
@@ -11,11 +10,12 @@ import QuizTimer from '../components/QuizTimer';
 
 interface ExamViewProps {
   examTitle?: string;
+  categoryId?: string;
   onFinish: (result: ExamResult) => void;
   onExit: () => void;
 }
 
-export const ExamView: React.FC<ExamViewProps> = ({ examTitle = "Exame TVDE", onFinish, onExit }) => {
+export const ExamView: React.FC<ExamViewProps> = ({ examTitle = "Exame TVDE", categoryId = "tvde", onFinish, onExit }) => {
   const { user } = useAuth();
   const { addResult } = useStats();
   
@@ -26,11 +26,11 @@ export const ExamView: React.FC<ExamViewProps> = ({ examTitle = "Exame TVDE", on
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Iniciar novo exame ao montar componente
-    const newQuestions = generateExam();
+    // Iniciar novo exame ao montar componente com base na categoria
+    const newQuestions = generateExam(categoryId);
     setQuestions(newQuestions);
     setIsLoading(false);
-  }, []);
+  }, [categoryId]);
 
   const handleFinish = useCallback((isTimeout: boolean) => {
     const score = questions.reduce((acc, q, idx) => {

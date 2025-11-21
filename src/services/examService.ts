@@ -11,8 +11,8 @@ const shuffleArray = <T,>(array: T[]): T[] => {
   return newArray;
 };
 
-// Configuração da Distribuição do Exame (Baseado no IMT)
-const CATEGORY_TARGETS = {
+// Configuração da Distribuição do Exame TVDE (Padrão)
+const TVDE_DISTRIBUTION = {
   'Código da Estrada': 10,
   'Lei TVDE': 6,
   'Comunicação e Turismo': 5,
@@ -22,15 +22,12 @@ const CATEGORY_TARGETS = {
 
 // Adapter: Converte pergunta antiga para o novo formato
 const convertToNewFormat = (lq: LegacyQuestion): Question => {
-  // Encontra o índice da resposta correta
   let correctIndex = lq.options.indexOf(lq.correct);
-  
-  // Fallback de segurança se a string não bater certo (não deve acontecer com dados válidos)
   if (correctIndex === -1) correctIndex = 0;
 
   return {
     id: lq.id,
-    text: lq.question, // Mapeia 'question' para 'text'
+    text: lq.question,
     options: lq.options,
     correctIndex: correctIndex,
     category: lq.category,
@@ -39,8 +36,21 @@ const convertToNewFormat = (lq: LegacyQuestion): Question => {
   };
 };
 
-export const generateExam = (): Question[] => {
-  // 1. Agrupar e normalizar categorias
+// Função auxiliar para normalizar categorias
+const normalizeCategory = (rawCategory: string): string => {
+  if (rawCategory === 'Segurança Rodoviária (PRP)') return 'Código da Estrada';
+  if (rawCategory === 'Inglês Técnico') return 'Comunicação e Turismo';
+  
+  if (rawCategory.includes('Lei') || rawCategory.includes('Regulamento')) return 'Lei TVDE';
+  if (rawCategory.includes('Mecânica') || rawCategory.includes('Eco')) return 'Mecânica e Eco-condução';
+  if (rawCategory.includes('Socorro') || rawCategory.includes('Segurança')) return 'Segurança e Socorro';
+  if (rawCategory.includes('Comunicação') || rawCategory.includes('Turismo')) return 'Comunicação e Turismo';
+  
+  return 'Código da Estrada';
+};
+
+export const generateExam = (examTypeId: string = 'tvde'): Question[] => {
+  // 1. Preparar pool de perguntas
   const pool: Record<string, LegacyQuestion[]> = {
     'Código da Estrada': [],
     'Lei TVDE': [],
@@ -50,54 +60,57 @@ export const generateExam = (): Question[] => {
   };
 
   MOCK_QUESTIONS.forEach(q => {
-    let cat = q.category || "Geral";
-    
-    if (cat === 'Segurança Rodoviária (PRP)') cat = 'Código da Estrada';
-    if (cat === 'Inglês Técnico') cat = 'Comunicação e Turismo';
-
-    if (!pool[cat]) {
-       if (cat.includes('Lei') || cat.includes('Regulamento')) cat = 'Lei TVDE';
-       else if (cat.includes('Mecânica') || cat.includes('Eco')) cat = 'Mecânica e Eco-condução';
-       else if (cat.includes('Socorro') || cat.includes('Segurança')) cat = 'Segurança e Socorro';
-       else if (cat.includes('Comunicação') || cat.includes('Turismo')) cat = 'Comunicação e Turismo';
-       else cat = 'Código da Estrada';
+    const cat = normalizeCategory(q.category || "Geral");
+    if (pool[cat]) {
+      pool[cat].push(q);
+    } else {
+      // Fallback para Código da Estrada se algo falhar
+      pool['Código da Estrada'].push(q);
     }
-    pool[cat].push(q);
   });
 
   let selectedLegacyQuestions: LegacyQuestion[] = [];
-  const usedIds = new Set<string>();
 
-  // 2. Selecionar perguntas balanceadas
-  Object.entries(CATEGORY_TARGETS).forEach(([category, targetCount]) => {
-    const questionsInCategory = pool[category] || [];
-    const shuffled = shuffleArray(questionsInCategory);
-    const toTake = Math.min(targetCount, shuffled.length);
+  if (examTypeId === 'tvde' || examTypeId === 'default') {
+    // --- MODO EXAME TVDE (MISTO) ---
+    // Segue a distribuição oficial
+    Object.entries(TVDE_DISTRIBUTION).forEach(([category, targetCount]) => {
+      const questionsInCategory = pool[category] || [];
+      const shuffled = shuffleArray(questionsInCategory);
+      const toTake = Math.min(targetCount, shuffled.length);
+      selectedLegacyQuestions.push(...shuffled.slice(0, toTake));
+    });
+
+    // Preencher o resto se faltarem perguntas para chegar a 30
+    const currentCount = selectedLegacyQuestions.length;
+    const remainingNeeded = EXAM_CONFIG.TOTAL_QUESTIONS - currentCount;
     
-    for(let i = 0; i < toTake; i++) {
-      selectedLegacyQuestions.push(shuffled[i]);
-      usedIds.add(shuffled[i].id);
+    if (remainingNeeded > 0) {
+      const usedIds = new Set(selectedLegacyQuestions.map(q => q.id));
+      const allRemaining = MOCK_QUESTIONS.filter(q => !usedIds.has(q.id));
+      const shuffledRemaining = shuffleArray(allRemaining);
+      selectedLegacyQuestions.push(...shuffledRemaining.slice(0, remainingNeeded));
     }
-  });
 
-  // 3. Preencher o resto
-  let currentCount = selectedLegacyQuestions.length;
-  let remainingNeeded = EXAM_CONFIG.TOTAL_QUESTIONS - currentCount;
-  
-  if (remainingNeeded > 0) {
-    const allRemaining = MOCK_QUESTIONS.filter(q => !usedIds.has(q.id));
-    const shuffledRemaining = shuffleArray(allRemaining);
-    selectedLegacyQuestions.push(...shuffledRemaining.slice(0, remainingNeeded));
+  } else if (examTypeId === 'code_b') {
+    // --- MODO CÓDIGO DA ESTRADA ---
+    // Apenas perguntas de Código da Estrada
+    const questions = pool['Código da Estrada'] || [];
+    const shuffled = shuffleArray(questions);
+    // Tenta pegar 30, ou todas se houver menos
+    selectedLegacyQuestions.push(...shuffled.slice(0, EXAM_CONFIG.TOTAL_QUESTIONS));
+
+  } else {
+    // --- OUTROS MODOS (Fallback Genérico) ---
+    // Gera um exame aleatório misto sem regras estritas
+    const shuffled = shuffleArray(MOCK_QUESTIONS);
+    selectedLegacyQuestions.push(...shuffled.slice(0, EXAM_CONFIG.TOTAL_QUESTIONS));
   }
 
   // 4. Baralhar opções, converter para novo formato e retornar
   return shuffleArray(selectedLegacyQuestions).map(lq => {
-    // Baralhar opções antes de converter para garantir que o índice muda
     const shuffledOptions = shuffleArray([...lq.options]);
-    
-    // Criar objeto temporário com opções baralhadas para conversão
     const tempQ = { ...lq, options: shuffledOptions };
-    
     return convertToNewFormat(tempQ);
   });
 };

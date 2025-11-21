@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { AppView, ExamResult, ExamCategory } from './types';
 import Confetti from './components/Confetti';
@@ -79,6 +78,7 @@ const App: React.FC = () => {
         return (
           <ExamView 
             examTitle={selectedCategory?.title || 'Exame Geral TVDE'}
+            categoryId={selectedCategory?.id || 'tvde'}
             onFinish={(result) => {
               setLastResult(result);
               if(result.passed) { setShowConfetti(true); setTimeout(() => setShowConfetti(false), 5000); }
