@@ -1,6 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Question, ExamSession, ExamMode, AnswerRecord } from '../types';
+import { generateUUID } from '../utils';
 
 interface UseExamEngineProps {
   questions: Question[];
@@ -68,7 +69,7 @@ export const useExamEngine = ({
 
     // Create session record
     const session: ExamSession = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       categoryId,
       mode,
       startTime: Date.now() - ((durationMinutes * 60 - timeLeft) * 1000),

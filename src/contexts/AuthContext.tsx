@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { UserProfile } from '../types';
+import { generateUUID } from '../utils';
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -27,7 +28,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = (name: string) => {
     const newUser: UserProfile = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       name,
       isPremium: false // Default to Free
     };

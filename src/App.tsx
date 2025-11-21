@@ -6,6 +6,7 @@ import { MOCK_QUESTIONS, INFO_MODULES, TVDE_FAQS, EXAM_CONFIG } from './constant
 import { generateExam, saveExamResult, getExamHistory } from './services/examService';
 import QuizTimer from './components/QuizTimer';
 import Confetti from './components/Confetti';
+import { generateUUID } from './utils';
 import { 
   CheckCircleIcon, XCircleIcon, HistoryIcon, PlayIcon, ChevronRightIcon, 
   UserIcon, EyeIcon, BookOpenIcon, InfoIcon, ChevronLeftIcon, LightBulbIcon,
@@ -14,6 +15,9 @@ import {
   PaperAirplaneIcon, HeartIcon, GiftIcon, CreditCardIcon, 
   ShareIcon, Bars3Icon, XMarkIcon
 } from './components/Icons';
+import { HomeView } from './views/HomeView';
+import { FAQView } from './views/FAQView';
+import { ExamCategory } from './types';
 
 const LEVELS = [
   { name: 'Iniciado', minXP: 0, color: 'gray' },
@@ -55,12 +59,6 @@ const App: React.FC = () => {
   // States for Info Mode
   const [selectedInfoModule, setSelectedInfoModule] = useState<InfoModule | null>(null);
 
-  // States for FAQ Mode and AI
-  const [faqSearch, setFaqSearch] = useState('');
-  const [expandedFAQ, setExpandedFAQ] = useState<string | null>(null);
-  const [dynamicFAQs, setDynamicFAQs] = useState<FAQ[]>([]);
-  const [isAskingAI, setIsAskingAI] = useState(false);
-
   // Innovation Features State
   const [smartRecommendation, setSmartRecommendation] = useState<string | null>(null);
   
@@ -78,13 +76,6 @@ const App: React.FC = () => {
   const [currentLevel, setCurrentLevel] = useState(LEVELS[0]);
   const [nextLevel, setNextLevel] = useState(LEVELS[1]);
   const [showConfetti, setShowConfetti] = useState(false);
-
-  // Global stats state (Sincronizado em tempo real)
-  const [globalStats, setGlobalStats] = useState({
-    totalExams: 2543, // Base inicial simulada
-    passed: 1650,
-    activeUsers: 124
-  });
 
   // Persistence Effect
   useEffect(() => {
@@ -171,31 +162,11 @@ const App: React.FC = () => {
     calculateAnalytics(loadHistory);
     calculateGamification(loadHistory);
     
-    const storedFAQs = localStorage.getItem('tvde_dynamic_faqs');
-    if (storedFAQs) {
-      setDynamicFAQs(JSON.parse(storedFAQs));
-    }
-
     const storedName = localStorage.getItem('tvde_username');
     if (storedName) setUserName(storedName);
 
-    // Carregar stats globais ou iniciar com base
-    const storedStats = localStorage.getItem('tvde_global_stats');
-    if (storedStats) {
-      setGlobalStats(JSON.parse(storedStats));
-    } else {
-      // Se não existir, cria uma base e guarda
-      localStorage.setItem('tvde_global_stats', JSON.stringify(globalStats));
-    }
-
     // Sincronização em Tempo Real entre Separadores
     const handleStorageChange = (event: StorageEvent) => {
-      // 1. Se outra aba atualizou as estatísticas globais (contagem de testes)
-      if (event.key === 'tvde_global_stats' && event.newValue) {
-        setGlobalStats(JSON.parse(event.newValue));
-      }
-
-      // 2. Se outra aba guardou um novo histórico de exame
       if (event.key === 'tvde_exam_history_v2') {
          const newHistory = getExamHistory();
          setHistory(newHistory);
@@ -203,18 +174,6 @@ const App: React.FC = () => {
          calculateGamification(newHistory);
       }
     };
-
-    // Simulação de utilizadores online (Visual apenas)
-    const heartbeat = setInterval(() => {
-       setGlobalStats(prev => {
-         // Pequena flutuação nos usuários online
-         const userFlux = Math.floor(Math.random() * 5) - 2;
-         return {
-           ...prev,
-           activeUsers: Math.max(50, prev.activeUsers + userFlux)
-         };
-       });
-    }, 5000);
 
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
@@ -227,7 +186,6 @@ const App: React.FC = () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
-      clearInterval(heartbeat);
     };
   }, []);
 
@@ -270,11 +228,9 @@ Este teste foi realizado através do Simulador TVDE Pro.
 
   // --- EXAM LOGIC ---
   const startExam = () => {
-    if (!userName.trim()) {
-      alert("Por favor, introduza o seu nome para iniciar o teste.");
-      return;
-    }
-    localStorage.setItem('tvde_username', userName);
+    const currentName = localStorage.getItem('tvde_username') || 'Utilizador';
+    setUserName(currentName);
+    
     const newQuestions = generateExam();
     setQuestions(newQuestions);
     setCurrentQuestionIndex(0);
@@ -339,10 +295,9 @@ Este teste foi realizado através do Simulador TVDE Pro.
       });
 
       const passed = score >= EXAM_CONFIG.PASS_SCORE && !isTimeout;
-      const safeId = `exam-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-
+      
       const result: ExamResult = {
-        id: safeId,
+        id: generateUUID(),
         userName: userName.trim(),
         date: new Date().toISOString(),
         score,
@@ -361,17 +316,17 @@ Este teste foi realizado através do Simulador TVDE Pro.
       calculateAnalytics(updatedHistory);
       calculateGamification(updatedHistory);
 
-      // ATUALIZAÇÃO DAS ESTATÍSTICAS GLOBAIS (REAL TIME)
-      setGlobalStats(prev => {
+      // Update Global Stats
+      const storedStats = localStorage.getItem('tvde_global_stats');
+      if (storedStats) {
+        const stats = JSON.parse(storedStats);
         const newStats = {
-          ...prev,
-          totalExams: prev.totalExams + 1,
-          passed: passed ? prev.passed + 1 : prev.passed
+          ...stats,
+          totalExams: stats.totalExams + 1,
+          passed: passed ? stats.passed + 1 : stats.passed
         };
-        // Isto dispara o evento 'storage' nas outras abas
         localStorage.setItem('tvde_global_stats', JSON.stringify(newStats));
-        return newStats;
-      });
+      }
 
       if (passed) {
         setShowConfetti(true);
@@ -441,64 +396,6 @@ Este teste foi realizado através do Simulador TVDE Pro.
       setCurrentView(targetView);
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleAskAI = async () => {
-    if (!isOnline) {
-      alert("Esta funcionalidade requer ligação à Internet.");
-      return;
-    }
-    
-    if (!faqSearch.trim()) return;
-    setIsAskingAI(true);
-
-    try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      
-      const prompt = `
-      Atue EXCLUSIVAMENTE como um formador profissional e especialista em TVDE (Transporte Individual e Remunerado de Passageiros) em Portugal.
-      O seu objetivo é esclarecer dúvidas de motoristas ou formandos.
-      O seu âmbito de resposta limita-se estritamente a:
-      1. Legislação TVDE (Lei 45/2018) e regulamentação do IMT.
-      2. Código da Estrada Português e Segurança Rodoviária.
-      3. Mecânica automóvel básica.
-      4. Primeiros Socorros (PAS, SBV).
-      5. Atendimento ao cliente e boas práticas.
-      6. Inglês técnico para motoristas.
-      7. Geografia de Portugal e turismo.
-
-      INSTRUÇÃO DE SEGURANÇA:
-      Se a pergunta NÃO for sobre estes temas, RECUSE responder e diga apenas:
-      "Como assistente virtual do Simulador TVDE, apenas posso responder a questões relacionadas com a atividade de motorista, legislação e segurança rodoviária."
-
-      Pergunta do utilizador: "${faqSearch}"`;
-      
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
-      });
-      
-      const answer = response.text || "Não foi possível obter uma resposta neste momento.";
-      
-      const newFAQ: FAQ = {
-        id: `ai-${Date.now()}`,
-        category: 'Geral', 
-        question: faqSearch,
-        answer: answer
-      };
-      
-      const updatedFAQs = [newFAQ, ...dynamicFAQs];
-      setDynamicFAQs(updatedFAQs);
-      localStorage.setItem('tvde_dynamic_faqs', JSON.stringify(updatedFAQs));
-      
-      setFaqSearch('');
-      setExpandedFAQ(newFAQ.id);
-    } catch (error) {
-      console.error(error);
-      alert("Erro ao conectar com o Assistente IA. Verifique sua internet.");
-    } finally {
-      setIsAskingAI(false);
-    }
   };
 
   // --- RENDERERS ---
@@ -601,7 +498,7 @@ Este teste foi realizado através do Simulador TVDE Pro.
             ))}
             <div className="h-px bg-gray-100 my-1"></div>
             <div className="px-4 py-2 text-xs text-gray-400 text-center">
-              v2.2.0 • Nelberto Gonçalves
+              v2.3.1 • Nelberto Gonçalves
             </div>
           </div>
         </>
@@ -676,144 +573,6 @@ Este teste foi realizado através do Simulador TVDE Pro.
       </div>
     );
   };
-
-  const renderHome = () => (
-    <div className="space-y-8 animate-fade-in pb-10">
-      <div className="text-center max-w-4xl mx-auto pt-4 px-4">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-50 text-indigo-700 text-sm font-medium mb-4 animate-slide-up">
-          <SparklesIcon className="w-4 h-4" />
-          <span>Atualizado para 2025 • Lei 45/2018</span>
-        </div>
-        <h2 className="text-4xl font-extrabold text-gray-900 tracking-tight mb-4 sm:text-5xl">
-          Prepare-se para o <span className="text-indigo-600">Exame TVDE</span>
-        </h2>
-        <p className="text-lg text-gray-600 mb-8 leading-relaxed max-w-2xl mx-auto">
-          Simulador profissional com inteligência artificial, estatísticas detalhadas e mais de 300 questões oficiais do IMT.
-        </p>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto mb-8">
-          <StatCard 
-            label="Testes Realizados" 
-            value={globalStats.totalExams.toLocaleString()} 
-            subtext="Total Global" 
-            color="blue"
-          />
-          <StatCard 
-            label="Utilizadores Online" 
-            value={globalStats.activeUsers.toLocaleString()} 
-            subtext="Em tempo real" 
-            color="green"
-          />
-           <div className="bg-white p-6 rounded-2xl shadow-[0_2px_10px_-4px_rgba(0,0,0,0.1)] border border-gray-100 flex flex-col items-center justify-center text-center transform transition hover:scale-105 duration-200">
-             <span className="text-sm font-semibold text-gray-900 mb-1">O Seu Nível</span>
-             <span className={`text-2xl font-bold text-${currentLevel.color}-600`}>{currentLevel.name}</span>
-             <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
-                <div className={`bg-${currentLevel.color}-500 h-1.5 rounded-full`} style={{ width: `${Math.min(100, (userXP / nextLevel.minXP) * 100)}%` }}></div>
-             </div>
-             <span className="text-xs text-gray-500 mt-1">{userXP} / {nextLevel.minXP} XP</span>
-          </div>
-        </div>
-  
-        {smartRecommendation && (
-           <div className="bg-orange-50 border border-orange-100 rounded-2xl p-4 mb-8 flex items-start gap-4 text-left animate-pulse-slow max-w-2xl mx-auto">
-              <div className="bg-orange-100 p-2 rounded-lg text-orange-600 shrink-0">
-                <LightBulbIcon className="w-6 h-6" />
-              </div>
-              <div>
-                <h4 className="font-bold text-gray-900">Recomendação de Estudo</h4>
-                <p className="text-sm text-gray-600">
-                  Detetámos dificuldades em <span className="font-semibold text-orange-700">{smartRecommendation}</span>. 
-                  Recomendamos focar o estudo neste módulo.
-                </p>
-                <button 
-                  onClick={() => {
-                    handleNavigation(AppView.STUDY_MENU);
-                  }}
-                  className="text-xs font-bold text-orange-600 hover:text-orange-800 mt-1 flex items-center gap-1"
-                >
-                  Estudar agora <ArrowUpIcon className="w-3 h-3 rotate-90" />
-                </button>
-              </div>
-           </div>
-        )}
-
-        <div className="w-full max-w-lg mx-auto bg-white p-8 rounded-2xl shadow-lg border border-gray-100">
-            <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center justify-center gap-2">
-              <PlayIcon className="w-6 h-6 text-indigo-600" />
-              Iniciar Simulação
-            </h3>
-            <div className="space-y-5">
-              <div>
-                <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2 text-left">O seu nome</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <UserIcon className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="text"
-                    id="username"
-                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                    placeholder="Ex: João Silva"
-                    value={userName}
-                    onChange={(e) => setUserName(e.target.value)}
-                  />
-                </div>
-              </div>
-              <button
-                onClick={startExam}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-4 rounded-xl shadow-lg hover:shadow-xl hover:shadow-indigo-200 transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
-              >
-                Começar Exame
-              </button>
-              <p className="text-xs text-gray-400 text-center mt-2">
-                30 perguntas • 60 minutos • Aprovação: 27/30
-              </p>
-            </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-4xl mx-auto mt-10">
-             <button 
-              onClick={() => handleNavigation(AppView.STUDY_MENU)}
-              className="bg-white hover:bg-gray-50 border border-gray-200 p-4 rounded-2xl flex flex-col items-center text-center gap-3 group transition-all hover:shadow-md"
-            >
-              <div className="bg-blue-100 text-blue-600 p-3 rounded-xl group-hover:scale-110 transition-transform">
-                <BookOpenIcon className="w-6 h-6" />
-              </div>
-              <div>
-                <div className="font-bold text-gray-900">Modo de Estudo</div>
-                <div className="text-xs text-gray-500">Pratique por temas</div>
-              </div>
-            </button>
-
-            <button 
-              onClick={() => handleNavigation(AppView.HISTORY)}
-              className="bg-white hover:bg-gray-50 border border-gray-200 p-4 rounded-2xl flex flex-col items-center text-center gap-3 group transition-all hover:shadow-md"
-            >
-              <div className="bg-purple-100 text-purple-600 p-3 rounded-xl group-hover:scale-110 transition-transform">
-                <ChartBarIcon className="w-6 h-6" />
-              </div>
-              <div>
-                <div className="font-bold text-gray-900">Meu Progresso</div>
-                <div className="text-xs text-gray-500">Veja a sua evolução</div>
-              </div>
-            </button>
-
-             <button 
-              onClick={() => setIsSupportOpen(true)}
-              className="bg-white hover:bg-pink-50 border border-gray-200 hover:border-pink-100 p-4 rounded-2xl flex flex-col items-center text-center gap-3 group transition-all hover:shadow-md"
-            >
-              <div className="bg-pink-100 text-pink-600 p-3 rounded-xl group-hover:scale-110 transition-transform">
-                <HeartIcon className="w-6 h-6" />
-              </div>
-              <div>
-                <div className="font-bold text-gray-900">Apoiar Projeto</div>
-                <div className="text-xs text-gray-500">Contribua connosco</div>
-              </div>
-            </button>
-          </div>
-      </div>
-    </div>
-  );
 
   const renderExam = () => {
     if (questions.length === 0) return <div>A carregar exame...</div>;
@@ -1233,7 +992,12 @@ Este teste foi realizado através do Simulador TVDE Pro.
       {renderSupportModal()}
 
       <main className="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {currentView === AppView.HOME && renderHome()}
+        {currentView === AppView.HOME && (
+          <HomeView 
+             onSelectCategory={(cat) => startExam()} // Simplified for legacy compatibility
+             onOpenSupport={() => setIsSupportOpen(true)}
+          />
+        )}
         {currentView === AppView.EXAM && renderExam()}
         {currentView === AppView.RESULTS && renderResults()}
         {currentView === AppView.STUDY_MENU && renderStudyMenu()}
@@ -1379,62 +1143,7 @@ Este teste foi realizado através do Simulador TVDE Pro.
           </div>
         )}
         {currentView === AppView.FAQ_MENU && (
-          <div className="max-w-3xl mx-auto animate-fade-in">
-             <h2 className="text-3xl font-bold mb-2">Perguntas Frequentes</h2>
-             <p className="text-gray-500 mb-8">Respostas rápidas sobre a atividade TVDE em Portugal.</p>
-
-             {/* AI Search Box */}
-             <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-1 rounded-2xl mb-8 shadow-xl">
-               <div className="bg-white rounded-xl p-2 flex items-center gap-2">
-                  <SparklesIcon className="w-6 h-6 text-purple-500 ml-2 animate-pulse" />
-                  <input 
-                    type="text" 
-                    placeholder="Pergunte à IA (Ex: Posso trabalhar sem empresa?)" 
-                    className="flex-1 p-2 outline-none text-gray-700"
-                    value={faqSearch}
-                    onChange={(e) => setFaqSearch(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleAskAI()}
-                  />
-                  <button 
-                    onClick={handleAskAI}
-                    disabled={isAskingAI}
-                    className="bg-gray-900 text-white px-4 py-2 rounded-lg font-bold hover:bg-gray-800 transition-colors flex items-center gap-2"
-                  >
-                    {isAskingAI ? '...' : <PaperAirplaneIcon className="w-4 h-4" />}
-                  </button>
-               </div>
-             </div>
-
-             <div className="space-y-3">
-                {[...dynamicFAQs, ...TVDE_FAQS].map((faq) => (
-                   <div key={faq.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden transition-all hover:shadow-md">
-                      <button 
-                        onClick={() => setExpandedFAQ(expandedFAQ === faq.id ? null : faq.id)}
-                        className="w-full p-4 text-left flex justify-between items-center gap-4 bg-white hover:bg-gray-50"
-                      >
-                        <div className="flex items-center gap-3">
-                           <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${
-                             faq.category === 'Legal' ? 'bg-red-100 text-red-700' :
-                             faq.category === 'Financeiro' ? 'bg-green-100 text-green-700' :
-                             faq.category === 'Operacional' ? 'bg-orange-100 text-orange-700' :
-                             'bg-blue-100 text-blue-700'
-                           }`}>
-                             {faq.category}
-                           </span>
-                           <span className="font-bold text-gray-900">{faq.question}</span>
-                        </div>
-                        {expandedFAQ === faq.id ? <ChevronUpIcon className="w-5 h-5 text-gray-400" /> : <ChevronDownIcon className="w-5 h-5 text-gray-400" />}
-                      </button>
-                      
-                      {expandedFAQ === faq.id && (
-                        <div className="p-4 pt-0 text-gray-600 bg-gray-50 border-t border-gray-100 leading-relaxed">
-                           <div className="py-2">{faq.answer}</div>
-                        </div>
-                      )}
-                   </div>
-                ))}
-             </div>
-          </div>
+          <FAQView onBack={() => setCurrentView(AppView.HOME)} />
         )}
       </main>
 

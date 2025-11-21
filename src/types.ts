@@ -14,7 +14,7 @@ export enum AppView {
   FAQ_MENU = 'FAQ_MENU'
 }
 
-// New Engine Question Type (Future Proofing)
+// --- TIPOS NOVOS (Para o futuro e useExamEngine) ---
 export interface Question {
   id: string;
   text: string;
@@ -25,23 +25,6 @@ export interface Question {
   imageUrl?: string;
 }
 
-// Legacy Question type (Current Data Structure)
-export interface LegacyQuestion {
-  id: string;
-  question: string;
-  options: string[];
-  correct: string;
-  category: string;
-  imageUrl?: string;
-}
-
-export interface LegacyAnswerRecord {
-  question: LegacyQuestion;
-  selectedAnswer: string;
-  isCorrect: boolean;
-}
-
-// New Engine Answer Record
 export interface AnswerRecord {
   questionId: string;
   selectedOptionIndex: number;
@@ -61,6 +44,22 @@ export interface ExamSession {
   passed: boolean;
 }
 
+// --- TIPOS LEGADO (Compatibilidade com dados atuais) ---
+export interface LegacyQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  correct: string;
+  category: string;
+  imageUrl?: string;
+}
+
+export interface LegacyAnswerRecord {
+  question: LegacyQuestion;
+  selectedAnswer: string;
+  isCorrect: boolean;
+}
+
 export interface ExamResult {
   id: string;
   userName: string;
@@ -72,6 +71,7 @@ export interface ExamResult {
   mistakes: LegacyAnswerRecord[];
 }
 
+// --- TIPOS GERAIS ---
 export interface InfoModule {
   id: string;
   title: string;

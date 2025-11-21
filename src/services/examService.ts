@@ -90,12 +90,16 @@ export const generateExam = (): LegacyQuestion[] => {
 const STORAGE_KEY = 'tvde_exam_history_v2';
 
 export const saveExamResult = (result: ExamResult): void => {
-  const currentHistory = getExamHistory();
-  const newHistory = [result, ...currentHistory];
-  if (newHistory.length > 50) newHistory.pop();
-  
-  // Saving to localStorage automatically triggers 'storage' events in OTHER tabs
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(newHistory));
+  try {
+    const currentHistory = getExamHistory();
+    const newHistory = [result, ...currentHistory];
+    if (newHistory.length > 50) newHistory.pop();
+    
+    // Saving to localStorage automatically triggers 'storage' events in OTHER tabs
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(newHistory));
+  } catch (error) {
+    console.warn("Falha ao guardar histórico. Modo privado ou armazenamento cheio?", error);
+  }
 };
 
 export const getExamHistory = (): ExamResult[] => {
