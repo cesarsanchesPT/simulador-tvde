@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useStats } from '../contexts/StatsContext';
 import { AVAILABLE_EXAMS } from '../data/examRegistry';
 import { ExamCategory } from '../types';
-import { GiftIcon, CheckCircleIcon, Squares2X2Icon, BookOpenIcon, SpeakerWaveIcon, ChartBarIcon, HeartIcon, ChevronRightIcon } from '../components/Icons';
+import { GiftIcon, Squares2X2Icon, BookOpenIcon, SpeakerWaveIcon, ChartBarIcon, HeartIcon, ChevronRightIcon } from '../components/Icons';
 
 // Simple Icon Mapper
 const IconMap: Record<string, any> = {
