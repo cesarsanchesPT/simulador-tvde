@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Question, ExamResult, MistakeRecord } from '../types';
 import { generateExam } from '../services/examService';
-import { EXAM_CONFIG } from '../constants';
 import { generateUUID } from '../utils';
 import { useAuth } from '../contexts/AuthContext';
 import { useStats } from '../contexts/StatsContext';
@@ -72,7 +71,6 @@ export const ExamView: React.FC<ExamViewProps> = ({
 
     // Calcular aprovação com base numa percentagem fixa (ex: 90%) ou regra
     // Regra base: Passa se errar menos de 3 em 30 (10%). 
-    const maxMistakes = Math.ceil(questions.length * 0.1); // Ex: 30 -> 3. 
     // Nota: Oficialmente TVDE é 27/30. Código B é 27/30. 
     const passed = score >= (questions.length - 3) && !isTimeout;
 
