@@ -1,34 +1,35 @@
-
 export type ExamMode = 'EXAM' | 'STUDY' | 'REVIEW';
 
-export interface ExamCategory {
-  id: string;
-  title: string;
-  description: string;
-  icon: string; // Icon name
-  totalQuestions: number; // Pool size
-  examDurationMinutes: number;
-  passScore: number;
-  questionsPerExam: number;
-  isPremium: boolean; // If true, requires premium account
+export enum AppView {
+  HOME = 'HOME',
+  EXAM = 'EXAM',
+  RESULTS = 'RESULTS',
+  HISTORY = 'HISTORY',
+  REVIEW = 'REVIEW',
+  STUDY_MENU = 'STUDY_MENU',
+  STUDY_SESSION = 'STUDY_SESSION',
+  INFO_MENU = 'INFO_MENU',
+  INFO_DETAIL = 'INFO_DETAIL',
+  FAQ_MENU = 'FAQ_MENU'
 }
 
+// --- TIPOS NOVOS (Motor Universal) ---
 export interface Question {
   id: string;
-  text: string;
-  options: string[];
-  correctIndex: number; // Changed from string comparison to index for robustness
-  explanation?: string;
-  category: string; // Internal topic (e.g., "Mecânica", "Legislação")
+  text: string; // Texto da pergunta
+  options: string[]; // Lista de opções
+  correctIndex: number; // Índice da resposta correta (0-3)
+  explanation?: string; // Explicação para modo estudo
+  category: string;
   imageUrl?: string;
 }
 
-// Legacy Question type for backward compatibility with constants.ts
+// --- TIPOS LEGADO (Para compatibilidade com constants.ts) ---
 export interface LegacyQuestion {
   id: string;
   question: string;
   options: string[];
-  correct: string;
+  correct: string; // Resposta correta em texto
   category: string;
   imageUrl?: string;
 }
@@ -38,21 +39,12 @@ export interface AnswerRecord {
   selectedOptionIndex: number;
   isCorrect: boolean;
   timestamp: number;
-  // Legacy support
-  question?: LegacyQuestion;
-  selectedAnswer?: string;
 }
 
-export interface ExamSession {
-  id: string;
-  categoryId: string;
-  mode: ExamMode;
-  startTime: number;
-  endTime?: number;
-  answers: Record<string, AnswerRecord>; // Map questionId -> Answer
-  questions: Question[]; // The specific subset for this session
-  score: number;
-  passed: boolean;
+export interface MistakeRecord {
+  question: Question;
+  selectedAnswer: string; // Texto da resposta selecionada
+  isCorrect: boolean;
 }
 
 export interface ExamResult {
@@ -63,13 +55,10 @@ export interface ExamResult {
   total: number;
   passed: boolean;
   isTimeout: boolean;
-  mistakes: {
-    question: LegacyQuestion;
-    selectedAnswer: string;
-    isCorrect: boolean;
-  }[];
+  mistakes: MistakeRecord[];
 }
 
+// --- TIPOS GERAIS ---
 export interface InfoModule {
   id: string;
   title: string;
@@ -101,5 +90,29 @@ export interface UserProfile {
   name: string;
   email?: string;
   isPremium: boolean;
-  institutionCode?: string; // For driving schools
+  institutionCode?: string; 
+}
+
+export interface ExamCategory {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  totalQuestions: number;
+  examDurationMinutes: number;
+  passScore: number;
+  questionsPerExam: number;
+  isPremium: boolean;
+}
+
+export interface ExamSession {
+  id: string;
+  categoryId: string;
+  mode: ExamMode;
+  startTime: number;
+  endTime: number;
+  answers: Record<string, AnswerRecord>;
+  questions: Question[];
+  score: number;
+  passed: boolean;
 }
