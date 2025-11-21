@@ -12,7 +12,7 @@ const shuffleArray = <T,>(array: T[]): T[] => {
 };
 
 // Configuração da Distribuição do Exame TVDE (Padrão)
-const TVDE_DISTRIBUTION = {
+const TVDE_DISTRIBUTION: Record<string, number> = {
   'Código da Estrada': 10,
   'Lei TVDE': 6,
   'Comunicação e Turismo': 5,
@@ -50,7 +50,7 @@ const normalizeCategory = (rawCategory: string): string => {
 };
 
 export const generateExam = (examTypeId: string = 'tvde'): Question[] => {
-  // 1. Preparar pool de perguntas
+  // 1. Preparar pool de perguntas agrupadas por categoria normalizada
   const pool: Record<string, LegacyQuestion[]> = {
     'Código da Estrada': [],
     'Lei TVDE': [],
@@ -64,7 +64,7 @@ export const generateExam = (examTypeId: string = 'tvde'): Question[] => {
     if (pool[cat]) {
       pool[cat].push(q);
     } else {
-      // Fallback para Código da Estrada se algo falhar
+      // Fallback seguro
       pool['Código da Estrada'].push(q);
     }
   });
@@ -73,7 +73,7 @@ export const generateExam = (examTypeId: string = 'tvde'): Question[] => {
 
   if (examTypeId === 'tvde' || examTypeId === 'default') {
     // --- MODO EXAME TVDE (MISTO) ---
-    // Segue a distribuição oficial
+    // Segue a distribuição oficial da Lei 45/2018
     Object.entries(TVDE_DISTRIBUTION).forEach(([category, targetCount]) => {
       const questionsInCategory = pool[category] || [];
       const shuffled = shuffleArray(questionsInCategory);
@@ -81,12 +81,14 @@ export const generateExam = (examTypeId: string = 'tvde'): Question[] => {
       selectedLegacyQuestions.push(...shuffled.slice(0, toTake));
     });
 
-    // Preencher o resto se faltarem perguntas para chegar a 30
+    // Preencher o resto se faltarem perguntas para chegar ao total (ex: 30)
+    // Isto acontece se alguma categoria não tiver perguntas suficientes
     const currentCount = selectedLegacyQuestions.length;
     const remainingNeeded = EXAM_CONFIG.TOTAL_QUESTIONS - currentCount;
     
     if (remainingNeeded > 0) {
       const usedIds = new Set(selectedLegacyQuestions.map(q => q.id));
+      // Buscar perguntas extra de qualquer categoria que não tenham sido usadas
       const allRemaining = MOCK_QUESTIONS.filter(q => !usedIds.has(q.id));
       const shuffledRemaining = shuffleArray(allRemaining);
       selectedLegacyQuestions.push(...shuffledRemaining.slice(0, remainingNeeded));
@@ -94,20 +96,36 @@ export const generateExam = (examTypeId: string = 'tvde'): Question[] => {
 
   } else if (examTypeId === 'code_b') {
     // --- MODO CÓDIGO DA ESTRADA ---
-    // Apenas perguntas de Código da Estrada
+    // Apenas perguntas de Código da Estrada e Segurança Rodoviária
     const questions = pool['Código da Estrada'] || [];
     const shuffled = shuffleArray(questions);
     // Tenta pegar 30, ou todas se houver menos
     selectedLegacyQuestions.push(...shuffled.slice(0, EXAM_CONFIG.TOTAL_QUESTIONS));
 
   } else {
-    // --- OUTROS MODOS (Fallback Genérico) ---
-    // Gera um exame aleatório misto sem regras estritas
-    const shuffled = shuffleArray(MOCK_QUESTIONS);
-    selectedLegacyQuestions.push(...shuffled.slice(0, EXAM_CONFIG.TOTAL_QUESTIONS));
+    // --- OUTROS MODOS (Fallback ou Futuros) ---
+    // Se for uma categoria específica que corresponda a uma chave do pool
+    const normalizedType = normalizeCategory(examTypeId); // Tenta normalizar caso passem nome da categoria
+    
+    if (pool[examTypeId]) {
+         // Se existir chave direta no pool (ex: passar "Lei TVDE" como ID)
+         const questions = pool[examTypeId];
+         const shuffled = shuffleArray(questions);
+         selectedLegacyQuestions.push(...shuffled.slice(0, EXAM_CONFIG.TOTAL_QUESTIONS));
+    } else if (pool[normalizedType] && pool[normalizedType].length > 0) {
+         // Se normalizou para algo válido
+         const questions = pool[normalizedType];
+         const shuffled = shuffleArray(questions);
+         selectedLegacyQuestions.push(...shuffled.slice(0, EXAM_CONFIG.TOTAL_QUESTIONS));
+    } else {
+         // Fallback Genérico: Exame aleatório misto
+         const shuffled = shuffleArray(MOCK_QUESTIONS);
+         selectedLegacyQuestions.push(...shuffled.slice(0, EXAM_CONFIG.TOTAL_QUESTIONS));
+    }
   }
 
   // 4. Baralhar opções, converter para novo formato e retornar
+  // O shuffleArray final garante que as perguntas não aparecem agrupadas por tema no exame TVDE
   return shuffleArray(selectedLegacyQuestions).map(lq => {
     const shuffledOptions = shuffleArray([...lq.options]);
     const tempQ = { ...lq, options: shuffledOptions };

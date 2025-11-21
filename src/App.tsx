@@ -158,6 +158,12 @@ const App: React.FC = () => {
             <HeartIcon className="w-4 h-4" />
             Apoiar
           </button>
+          <div className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 ${
+            isOnline ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+          }`}>
+            <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`}></span>
+            {isOnline ? 'Online' : 'Offline'}
+          </div>
           {user && (
             <button 
               onClick={handleLogout}

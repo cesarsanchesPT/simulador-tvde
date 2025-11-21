@@ -27,9 +27,18 @@ export const ExamView: React.FC<ExamViewProps> = ({ examTitle = "Exame TVDE", ca
 
   useEffect(() => {
     // Iniciar novo exame ao montar componente com base na categoria
-    const newQuestions = generateExam(categoryId);
-    setQuestions(newQuestions);
-    setIsLoading(false);
+    setIsLoading(true);
+    // Pequeno timeout para garantir que a UI mostra o loading state se a geração for pesada
+    const timer = setTimeout(() => {
+      const newQuestions = generateExam(categoryId);
+      setQuestions(newQuestions);
+      setCurrentIndex(0);
+      setAnswers({});
+      setTimeLeft(EXAM_CONFIG.DURATION_MINUTES * 60);
+      setIsLoading(false);
+    }, 10);
+    
+    return () => clearTimeout(timer);
   }, [categoryId]);
 
   const handleFinish = useCallback((isTimeout: boolean) => {
@@ -82,7 +91,12 @@ export const ExamView: React.FC<ExamViewProps> = ({ examTitle = "Exame TVDE", ca
     }
   };
 
-  if (isLoading || questions.length === 0) return <div className="p-10 text-center">A preparar exame...</div>;
+  if (isLoading || questions.length === 0) return (
+    <div className="flex flex-col items-center justify-center min-h-[50vh] animate-pulse">
+      <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
+      <p className="text-gray-500 font-medium">A preparar exame {examTitle}...</p>
+    </div>
+  );
 
   const q = questions[currentIndex];
   const isLast = currentIndex === questions.length - 1;
@@ -95,11 +109,11 @@ export const ExamView: React.FC<ExamViewProps> = ({ examTitle = "Exame TVDE", ca
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 mb-6 flex flex-wrap gap-4 items-center justify-between sticky top-20 z-30">
         <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
           <div className="flex items-center gap-3">
-             <button onClick={handleExitConfirm} className="p-2 hover:bg-gray-100 rounded-full text-gray-500">
+             <button onClick={handleExitConfirm} className="p-2 hover:bg-gray-100 rounded-full text-gray-500 transition-colors">
                <ChevronLeftIcon className="w-5 h-5" />
              </button>
              <div>
-               <div className="text-xs font-bold text-indigo-600 uppercase tracking-wide">{examTitle}</div>
+               <div className="text-xs font-bold text-indigo-600 uppercase tracking-wide truncate max-w-[150px] sm:max-w-none">{examTitle}</div>
                <div className="text-sm font-bold text-gray-600">
                   Q. {currentIndex + 1} <span className="text-gray-400 font-normal">/ {questions.length}</span>
                </div>
@@ -111,7 +125,7 @@ export const ExamView: React.FC<ExamViewProps> = ({ examTitle = "Exame TVDE", ca
         </div>
 
         <div className="hidden sm:flex flex-1 mx-4 h-2 bg-gray-100 rounded-full overflow-hidden">
-           <div className="h-full bg-indigo-500 transition-all duration-300" style={{ width: `${progressPercent}%` }}></div>
+           <div className="h-full bg-indigo-500 transition-all duration-300 ease-out" style={{ width: `${progressPercent}%` }}></div>
         </div>
 
         <div className="hidden sm:block">
@@ -123,12 +137,13 @@ export const ExamView: React.FC<ExamViewProps> = ({ examTitle = "Exame TVDE", ca
       <div className="bg-white rounded-3xl shadow-xl border border-gray-200 overflow-hidden">
         <div className="p-6 sm:p-10">
           <div className="flex items-center justify-between mb-6">
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 uppercase tracking-wide">
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 uppercase tracking-wide border border-indigo-100">
               {q.category}
             </span>
             <button
               onClick={() => speakQuestion(q.text, q.options)}
               className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors"
+              title="Ler em voz alta"
             >
               <SpeakerWaveIcon className="w-5 h-5" />
             </button>
@@ -147,8 +162,8 @@ export const ExamView: React.FC<ExamViewProps> = ({ examTitle = "Exame TVDE", ca
                   onClick={() => handleAnswerSelect(idx)}
                   className={`w-full text-left p-5 rounded-2xl border-2 transition-all duration-200 flex items-start gap-4 group ${
                     isSelected 
-                      ? 'border-indigo-600 bg-indigo-50 ring-1 ring-indigo-600' 
-                      : 'border-gray-200 hover:border-indigo-300 hover:bg-indigo-50'
+                      ? 'border-indigo-600 bg-indigo-50 ring-1 ring-indigo-600 shadow-md' 
+                      : 'border-gray-200 hover:border-indigo-300 hover:bg-indigo-50/50'
                   }`}
                 >
                   <div className={`w-6 h-6 mt-0.5 rounded-full flex items-center justify-center text-xs font-bold border transition-colors shrink-0 ${
