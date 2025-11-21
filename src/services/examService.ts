@@ -1,6 +1,6 @@
 
-import { MOCK_QUESTIONS } from '../constants';
-import { Question, ExamResult, EXAM_CONFIG } from '../types';
+import { MOCK_QUESTIONS, EXAM_CONFIG } from '../constants';
+import { LegacyQuestion, ExamResult } from '../types';
 
 // Utility to shuffle array
 const shuffleArray = <T,>(array: T[]): T[] => {
@@ -22,9 +22,9 @@ const CATEGORY_TARGETS = {
   'Segurança e Socorro': 4           // SEPS - Segurança e Primeiros Socorros
 };
 
-export const generateExam = (): Question[] => {
+export const generateExam = (): LegacyQuestion[] => {
   // 1. Agrupar todas as questões por categoria normalizada
-  const pool: Record<string, Question[]> = {
+  const pool: Record<string, LegacyQuestion[]> = {
     'Código da Estrada': [],
     'Lei TVDE': [],
     'Comunicação e Turismo': [],
@@ -54,7 +54,7 @@ export const generateExam = (): Question[] => {
     pool[cat].push(q);
   });
 
-  let selectedQuestions: Question[] = [];
+  let selectedQuestions: LegacyQuestion[] = [];
   const usedIds = new Set<string>();
 
   // 2. Selecionar perguntas baseadas na distribuição oficial
@@ -93,6 +93,8 @@ export const saveExamResult = (result: ExamResult): void => {
   const currentHistory = getExamHistory();
   const newHistory = [result, ...currentHistory];
   if (newHistory.length > 50) newHistory.pop();
+  
+  // Saving to localStorage automatically triggers 'storage' events in OTHER tabs
   localStorage.setItem(STORAGE_KEY, JSON.stringify(newHistory));
 };
 

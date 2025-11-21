@@ -14,6 +14,7 @@ export enum AppView {
   FAQ_MENU = 'FAQ_MENU'
 }
 
+// New Engine Question Type (Future Proofing)
 export interface Question {
   id: string;
   text: string;
@@ -24,7 +25,7 @@ export interface Question {
   imageUrl?: string;
 }
 
-// Legacy Question type for backward compatibility with constants.ts
+// Legacy Question type (Current Data Structure)
 export interface LegacyQuestion {
   id: string;
   question: string;
@@ -34,19 +35,30 @@ export interface LegacyQuestion {
   imageUrl?: string;
 }
 
-// Renamed from AnswerRecord to LegacyAnswerRecord to support the legacy App.tsx logic
 export interface LegacyAnswerRecord {
   question: LegacyQuestion;
   selectedAnswer: string;
   isCorrect: boolean;
 }
 
-// New AnswerRecord for the Exam Engine (Index based)
+// New Engine Answer Record
 export interface AnswerRecord {
   questionId: string;
   selectedOptionIndex: number;
   isCorrect: boolean;
   timestamp: number;
+}
+
+export interface ExamSession {
+  id: string;
+  categoryId: string;
+  mode: ExamMode;
+  startTime: number;
+  endTime: number;
+  answers: Record<string, AnswerRecord>;
+  questions: Question[];
+  score: number;
+  passed: boolean;
 }
 
 export interface ExamResult {
@@ -57,7 +69,7 @@ export interface ExamResult {
   total: number;
   passed: boolean;
   isTimeout: boolean;
-  mistakes: LegacyAnswerRecord[]; // Updated to use LegacyAnswerRecord
+  mistakes: LegacyAnswerRecord[];
 }
 
 export interface InfoModule {
@@ -104,16 +116,4 @@ export interface ExamCategory {
   passScore: number;
   questionsPerExam: number;
   isPremium: boolean;
-}
-
-export interface ExamSession {
-  id: string;
-  categoryId: string;
-  mode: ExamMode;
-  startTime: number;
-  endTime: number;
-  answers: Record<string, AnswerRecord>;
-  questions: Question[];
-  score: number;
-  passed: boolean;
 }
