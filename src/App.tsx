@@ -1,54 +1,75 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { GoogleGenAI } from "@google/genai";
-import { AppView, LegacyQuestion, ExamResult, AnswerRecord, InfoModule, FAQ } from './types';
-import { MOCK_QUESTIONS, INFO_MODULES, TVDE_FAQS, EXAM_CONFIG } from './constants';
+import { AppView, Question, ExamResult, AnswerRecord, EXAM_CONFIG, InfoModule, FAQ } from './types';
+import { MOCK_QUESTIONS, INFO_MODULES, TVDE_FAQS } from './constants';
 import { generateExam, saveExamResult, getExamHistory } from './services/examService';
 import QuizTimer from './components/QuizTimer';
 import Confetti from './components/Confetti';
-import {
-  ClockIcon, CheckCircleIcon, XCircleIcon, HistoryIcon, PlayIcon, ChevronRightIcon,
+import { 
+  ClockIcon, CheckCircleIcon, XCircleIcon, HistoryIcon, PlayIcon, ChevronRightIcon, 
   UserIcon, EyeIcon, BookOpenIcon, InfoIcon, ChevronLeftIcon, LightBulbIcon,
-  ChatBubbleLeftRightIcon, MagnifyingGlassIcon, ChevronDownIcon, ChevronUpIcon, SparklesIcon,
-  ArrowUpIcon, EnvelopeIcon, FlagIcon, Squares2X2Icon, ChartBarIcon, SpeakerWaveIcon,
-  WifiIcon, WifiSlashIcon, PaperAirplaneIcon, HeartIcon, GiftIcon, CreditCardIcon,
-  QrCodeIcon, ShareIcon, Bars3Icon, XMarkIcon
+  ChatBubbleLeftRightIcon, ChevronDownIcon, ChevronUpIcon, SparklesIcon,
+  ArrowUpIcon, EnvelopeIcon, Squares2X2Icon, ChartBarIcon, SpeakerWaveIcon,
+  PaperAirplaneIcon, HeartIcon, GiftIcon, CreditCardIcon, 
+  ShareIcon, Bars3Icon, XMarkIcon
 } from './components/Icons';
 
-const LEVELS = [
-  { name: 'Iniciado', minXP: 0, color: 'gray' },
-  { name: 'Bronze', minXP: 500, color: 'orange' },
-  { name: 'Prata', minXP: 1500, color: 'slate' },
-  { name: 'Ouro', minXP: 3000, color: 'yellow' },
-  { name: 'Platina', minXP: 5000, color: 'indigo' },
-  { name: 'Diamante', minXP: 10000, color: 'cyan' }
-];
+// Declaração para o TypeScript reconhecer process.env
+declare var process: {
+  env: {
+    API_KEY: string;
+    [key: string]: string | undefined;
+  }
+};
 
-const StatCard = ({ label, value, subtext, color = "indigo" }: { label: string, value: string, subtext: string, color?: string }) => (
-  <div className={`bg-white p-6 rounded-2xl shadow-[0_2px_10px_-4px_rgba(0,0,0,0.1)] border border-gray-100 flex flex-col items-center justify-center text-center transform transition hover:scale-105 duration-200`}>
+// Custom Lock Icon for the disabled state
+const LockClosedIcon = ({ className }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+  </svg>
+);
+
+const StatCard = ({ label, value, subtext, color = "indigo", live = false }: { label: string, value: string, subtext: string, color?: string, live?: boolean }) => (
+  <div className={`bg-white p-6 rounded-2xl shadow-[0_2px_10px_-4px_rgba(0,0,0,0.1)] border border-gray-100 flex flex-col items-center justify-center text-center transform transition hover:scale-105 duration-200 relative overflow-hidden`}>
+    {live && (
+        <span className="absolute top-3 right-3 flex h-2.5 w-2.5" title="Em tempo real">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+        </span>
+    )}
     <span className={`text-3xl font-bold mb-1 text-${color}-600`}>{value}</span>
     <span className="text-sm font-semibold text-gray-900">{label}</span>
     <span className="text-xs text-gray-500 mt-1">{subtext}</span>
   </div>
 );
 
+// Level System Logic
+const LEVELS = [
+  { name: 'Motorista Novato', minXP: 0, color: 'gray' },
+  { name: 'Aspirante', minXP: 100, color: 'blue' }, // ~4 exams passed
+  { name: 'Profissional', minXP: 500, color: 'indigo' },
+  { name: 'Especialista', minXP: 1500, color: 'purple' },
+  { name: 'Elite TVDE', minXP: 3000, color: 'yellow' },
+  { name: 'Lenda da Estrada', minXP: 5000, color: 'emerald' },
+];
+
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<AppView>(AppView.HOME);
-  const [questions, setQuestions] = useState<LegacyQuestion[]>([]);
+  const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [timeLeft, setTimeLeft] = useState(EXAM_CONFIG.DURATION_MINUTES * 60);
-  const [showQuickNav, setShowQuickNav] = useState(false);
-
+  
   const [userName, setUserName] = useState('');
   const [lastResult, setLastResult] = useState<ExamResult | null>(null);
   const [history, setHistory] = useState<ExamResult[]>([]);
-
+  
   const [reviewData, setReviewData] = useState<ExamResult | null>(null);
   const [returnView, setReturnView] = useState<AppView>(AppView.RESULTS);
 
   // States for Study Mode
   const [studyCategory, setStudyCategory] = useState<string>('Todos');
-  const [studyQuestions, setStudyQuestions] = useState<LegacyQuestion[]>([]);
+  const [studyQuestions, setStudyQuestions] = useState<Question[]>([]);
   const [currentStudyIndex, setCurrentStudyIndex] = useState(0);
   const [studyAnswer, setStudyAnswer] = useState<string | null>(null);
 
@@ -61,10 +82,6 @@ const App: React.FC = () => {
   const [dynamicFAQs, setDynamicFAQs] = useState<FAQ[]>([]);
   const [isAskingAI, setIsAskingAI] = useState(false);
 
-  // Innovation Features State
-  const [analyticsData, setAnalyticsData] = useState<Record<string, { total: number, correct: number }>>({});
-  const [smartRecommendation, setSmartRecommendation] = useState<string | null>(null);
-
   // Connectivity State
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
@@ -74,54 +91,26 @@ const App: React.FC = () => {
   // Mobile Menu State
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Gamification
+  // Show Confetti
+  const [showConfetti, setShowConfetti] = useState(false);
+
+  // Gamification State
   const [userXP, setUserXP] = useState(0);
   const [currentLevel, setCurrentLevel] = useState(LEVELS[0]);
   const [nextLevel, setNextLevel] = useState(LEVELS[1]);
-  const [showConfetti, setShowConfetti] = useState(false);
 
-  // Global stats state (Sincronizado em tempo real)
-  const [globalStats, setGlobalStats] = useState({
-    totalExams: 2543, // Base inicial simulada
-    passed: 1650,
-    activeUsers: 124
+  // Community Stats (Calculated dynamically)
+  const [communityStats, setCommunityStats] = useState({
+    totalExams: 0,
+    activeUsers: 0
   });
 
-  // Persistence Effect
   useEffect(() => {
-    const savedState = localStorage.getItem('tvde_ui_prefs');
-    if (savedState) {
-      try {
-        const { view, category } = JSON.parse(savedState);
-        if (view && view !== AppView.EXAM && view !== AppView.STUDY_SESSION && view !== AppView.RESULTS) {
-           setCurrentView(view);
-        }
-        if (category) {
-          setStudyCategory(category);
-        }
-      } catch (e) {
-        console.error("Failed to load preferences", e);
-      }
-    }
-  }, []);
-
-  // Save State Effect
-  useEffect(() => {
-    if (currentView !== AppView.EXAM && currentView !== AppView.STUDY_SESSION) {
-      localStorage.setItem('tvde_ui_prefs', JSON.stringify({
-        view: currentView,
-        category: studyCategory
-      }));
-    }
-  }, [currentView, studyCategory]);
-
-  useEffect(() => {
-    // 1. Load Local History & Gamification
+    // 1. Load Local History
     const loadHistory = getExamHistory();
     setHistory(loadHistory);
-    calculateAnalytics(loadHistory);
     calculateGamification(loadHistory);
-
+    
     const storedFAQs = localStorage.getItem('tvde_dynamic_faqs');
     if (storedFAQs) {
       setDynamicFAQs(JSON.parse(storedFAQs));
@@ -130,94 +119,67 @@ const App: React.FC = () => {
     const storedName = localStorage.getItem('tvde_username');
     if (storedName) setUserName(storedName);
 
-    // Carregar stats globais ou iniciar com base
-    const storedStats = localStorage.getItem('tvde_global_stats');
-    if (storedStats) {
-      setGlobalStats(JSON.parse(storedStats));
-    } else {
-      // Se não existir, cria uma base e guarda
-      localStorage.setItem('tvde_global_stats', JSON.stringify(globalStats));
-    }
+    // 2. Lógica de Estatísticas da Comunidade "Live"
+    const calculateBaseStats = () => {
+      const now = new Date();
+      const startOfYear = new Date(now.getFullYear(), 0, 1);
+      const diffTime = Math.abs(now.getTime() - startOfYear.getTime());
+      const diffHours = Math.ceil(diffTime / (1000 * 60 * 60)); 
+      
+      // Base consistente entre dispositivos (depende da hora do ano)
+      const baseTotal = 2500 + (diffHours * 12);
+      
+      // Base de utilizadores depende da hora do dia
+      const currentHour = now.getHours();
+      const isDayTime = currentHour >= 8 && currentHour <= 23;
+      const baseUsers = isDayTime ? 340 : 115;
 
-    // Sincronização em Tempo Real entre Separadores
-    const handleStorageChange = (event: StorageEvent) => {
-      // 1. Se outra aba atualizou as estatísticas globais (contagem de testes)
-      if (event.key === 'tvde_global_stats' && event.newValue) {
-        setGlobalStats(JSON.parse(event.newValue));
-      }
-
-      // 2. Se outra aba guardou um novo histórico de exame
-      if (event.key === 'tvde_exam_history_v2') {
-         const newHistory = getExamHistory();
-         setHistory(newHistory);
-         calculateAnalytics(newHistory);
-         calculateGamification(newHistory);
-      }
+      return { total: baseTotal, users: baseUsers };
     };
 
-    // Simulação de utilizadores online (Visual apenas)
+    const base = calculateBaseStats();
+    setCommunityStats({
+      totalExams: base.total,
+      activeUsers: base.users
+    });
+
+    // Intervalo "Heartbeat" para simular atividade em tempo real
     const heartbeat = setInterval(() => {
-       setGlobalStats(prev => {
-         // Pequena flutuação nos usuários online
-         const userFlux = Math.floor(Math.random() * 5) - 2;
+       setCommunityStats(prev => {
+         // 40% de chance de adicionar um novo exame a cada 3 segundos
+         const newExam = Math.random() > 0.6 ? 1 : 0;
+         
+         // Pequena flutuação nos usuários online (-2 a +3)
+         const userFlux = Math.floor(Math.random() * 6) - 2;
+         
          return {
-           ...prev,
+           totalExams: prev.totalExams + newExam,
            activeUsers: Math.max(50, prev.activeUsers + userFlux)
          };
        });
-    }, 5000);
+    }, 3000);
 
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener('storage', handleStorageChange);
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       clearInterval(heartbeat);
     };
   }, []);
 
-  const calculateAnalytics = (hist: ExamResult[]) => {
-    if (hist.length === 0) return;
-
-    const stats: Record<string, { total: number, correct: number }> = {};
-
-    hist.forEach(exam => {
-      exam.mistakes.forEach(m => {
-        const cat = m.question.category;
-        if (!stats[cat]) stats[cat] = { total: 0, correct: 0 };
-        stats[cat].total += 1; // Counting errors
-      });
-    });
-
-    let maxErrors = 0;
-    let worstCategory = '';
-
-    Object.entries(stats).forEach(([cat, data]) => {
-      if (data.total > maxErrors) {
-        maxErrors = data.total;
-        worstCategory = cat;
-      }
-    });
-
-    setAnalyticsData(stats);
-    if (worstCategory) {
-      setSmartRecommendation(worstCategory);
-    }
-  };
-
   const calculateGamification = (hist: ExamResult[]) => {
+    // XP Logic: 1 point per correct answer (approx). 
+    // Bonus: 50 XP for passing an exam.
     let totalXP = 0;
     hist.forEach(exam => {
        totalXP += exam.score; // 1 XP per question
        if (exam.passed) totalXP += 50; // Bonus
     });
-
+    
     setUserXP(totalXP);
 
     let level = LEVELS[0];
@@ -238,14 +200,14 @@ const App: React.FC = () => {
       alert("O seu navegador não suporta leitura de voz.");
       return;
     }
-
+    
     window.speechSynthesis.cancel();
-
+    
     const utterance = new SpeechSynthesisUtterance();
     utterance.text = `${text}. Opções: ${options.map((o, i) => `Opção ${String.fromCharCode(65+i)}: ${o}`).join('. ')}`;
     utterance.lang = 'pt-PT';
     utterance.rate = 1.1;
-
+    
     window.speechSynthesis.speak(utterance);
   };
 
@@ -270,7 +232,7 @@ Este teste foi realizado através do Simulador TVDE Pro.
     window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
 
-  // --- EXAM LOGIC ---
+  // --- EXAM MODE LOGIC (OFICIAL) ---
   const startExam = () => {
     if (!userName.trim()) {
       alert("Por favor, introduza o seu nome para iniciar o teste.");
@@ -282,12 +244,12 @@ Este teste foi realizado através do Simulador TVDE Pro.
     setCurrentQuestionIndex(0);
     setAnswers({});
     setTimeLeft(EXAM_CONFIG.DURATION_MINUTES * 60);
-    setShowQuickNav(false);
     setCurrentView(AppView.EXAM);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleAnswerSelect = (option: string) => {
+    // No modo exame, permitimos mudar a resposta enquanto estiver na pergunta
     setAnswers(prev => ({
       ...prev,
       [currentQuestionIndex]: option
@@ -313,20 +275,21 @@ Este teste foi realizado através do Simulador TVDE Pro.
     const total = questions.length;
     const remaining = total - answeredCount;
 
-    let message = `Tem a certeza que pretende entregar a prova?`;
     if (remaining > 0) {
-      message = `ATENÇÃO: Ainda tem ${remaining} pergunta(s) por responder.\n\nSe finalizar agora, estas contarão como ERRADAS.\n\nDeseja mesmo entregar a prova?`;
-    }
-
-    if (window.confirm(message)) {
-      finishExam(false);
+      if (window.confirm(`ATENÇÃO: Ainda tem ${remaining} pergunta(s) por responder.\n\nSe finalizar agora, estas contarão como ERRADAS.\n\nDeseja mesmo entregar a prova?`)) {
+        finishExam(false);
+      }
+    } else {
+      if (window.confirm("Tem a certeza que pretende entregar a prova e ver o resultado?")) {
+        finishExam(false);
+      }
     }
   };
 
   const finishExam = useCallback((isTimeout: boolean) => {
     try {
       let score = 0;
-      const mistakes: ExamResult['mistakes'] = [];
+      const mistakes: AnswerRecord[] = [];
 
       questions.forEach((q, index) => {
         const selected = answers[index];
@@ -342,8 +305,8 @@ Este teste foi realizado através do Simulador TVDE Pro.
         }
       });
 
-      const passed = score >= EXAM_CONFIG.PASS_SCORE && !isTimeout;
       const safeId = `exam-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      const passed = score >= EXAM_CONFIG.PASS_SCORE && !isTimeout;
 
       const result: ExamResult = {
         id: safeId,
@@ -359,24 +322,13 @@ Este teste foi realizado através do Simulador TVDE Pro.
       saveExamResult(result);
       setLastResult(result);
       setReviewData(result);
-
+      
       const updatedHistory = getExamHistory();
       setHistory(updatedHistory);
-      calculateAnalytics(updatedHistory);
-      calculateGamification(updatedHistory);
+      calculateGamification(updatedHistory); // Update XP
 
-      // ATUALIZAÇÃO DAS ESTATÍSTICAS GLOBAIS (REAL TIME)
-      setGlobalStats(prev => {
-        const newStats = {
-          ...prev,
-          totalExams: prev.totalExams + 1,
-          passed: passed ? prev.passed + 1 : prev.passed
-        };
-        // Isto dispara o evento 'storage' nas outras abas
-        localStorage.setItem('tvde_global_stats', JSON.stringify(newStats));
-        return newStats;
-      });
-
+      // Não precisamos atualizar stats globais no localStorage pois agora usamos o sistema determinístico
+      
       if (passed) {
         setShowConfetti(true);
         setTimeout(() => setShowConfetti(false), 5000);
@@ -397,14 +349,25 @@ Este teste foi realizado através do Simulador TVDE Pro.
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // --- STUDY MODE LOGIC ---
+  // --- STUDY MODE LOGIC (TREINO) ---
+  
+  const startGeneralStudy = () => {
+     const newQuestions = generateExam();
+     setStudyCategory("Simulado Geral");
+     setStudyQuestions(newQuestions);
+     setCurrentStudyIndex(0);
+     setStudyAnswer(null);
+     setCurrentView(AppView.STUDY_SESSION);
+     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const startStudySession = (category: string) => {
-    const filtered = category === 'Todos'
-      ? [...MOCK_QUESTIONS]
+    const filtered = category === 'Todos' 
+      ? [...MOCK_QUESTIONS] 
       : MOCK_QUESTIONS.filter(q => q.category === category);
-
+    
     const shuffled = filtered.sort(() => Math.random() - 0.5);
-
+    
     setStudyCategory(category);
     setStudyQuestions(shuffled);
     setCurrentStudyIndex(0);
@@ -414,7 +377,7 @@ Este teste foi realizado através do Simulador TVDE Pro.
   };
 
   const handleStudyAnswer = (option: string) => {
-    if (studyAnswer) return;
+    if (studyAnswer) return; // Impede mudar a resposta no modo estudo (feedback imediato)
     setStudyAnswer(option);
   };
 
@@ -424,9 +387,9 @@ Este teste foi realizado através do Simulador TVDE Pro.
       setStudyAnswer(null);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
-      alert("Sessão de estudo concluída!");
-      setCurrentView(AppView.STUDY_MENU);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      if(window.confirm("Terminou todas as perguntas deste treino! Voltar ao menu?")) {
+          setCurrentView(AppView.STUDY_MENU);
+      }
     }
   };
 
@@ -436,15 +399,39 @@ Este teste foi realizado através do Simulador TVDE Pro.
     if (currentView === AppView.EXAM) {
       if (window.confirm("Atenção: Ao sair do exame, o seu progresso será perdido. Deseja continuar?")) {
         setCurrentView(targetView);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
-    } else if (currentView === AppView.STUDY_SESSION) {
-      if (window.confirm("Deseja sair da sessão de estudo atual?")) {
-        setCurrentView(targetView);
+      return;
+    } 
+    
+    if (currentView === AppView.STUDY_SESSION) {
+      if (currentStudyIndex === 0 && !studyAnswer) {
+         setCurrentView(targetView);
+         window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+         if (window.confirm("Deseja encerrar a sessão de estudo atual?")) {
+            setCurrentView(targetView);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+         }
       }
-    } else {
-      setCurrentView(targetView);
+      return;
     }
+
+    setCurrentView(targetView);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleQuitSession = (force: boolean = false) => {
+    if (force || (currentStudyIndex === 0 && !studyAnswer)) {
+        setCurrentView(AppView.STUDY_MENU);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+    }
+
+    if (window.confirm("Deseja sair do modo de estudo? O progresso desta sessão será perdido.")) {
+      setCurrentView(AppView.STUDY_MENU);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   const handleAskAI = async () => {
@@ -453,12 +440,17 @@ Este teste foi realizado através do Simulador TVDE Pro.
       return;
     }
 
+    if (!process.env.API_KEY) {
+       alert("A chave de API (API_KEY) não está configurada. Por favor configure-a nas definições do projeto na Vercel.");
+       return;
+    }
+    
     if (!faqSearch.trim()) return;
     setIsAskingAI(true);
 
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
+      
       const prompt = `
       Atue EXCLUSIVAMENTE como um formador profissional e especialista em TVDE (Transporte Individual e Remunerado de Passageiros) em Portugal.
       O seu objetivo é esclarecer dúvidas de motoristas ou formandos.
@@ -476,30 +468,30 @@ Este teste foi realizado através do Simulador TVDE Pro.
       "Como assistente virtual do Simulador TVDE, apenas posso responder a questões relacionadas com a atividade de motorista, legislação e segurança rodoviária."
 
       Pergunta do utilizador: "${faqSearch}"`;
-
+      
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: prompt,
       });
-
+      
       const answer = response.text || "Não foi possível obter uma resposta neste momento.";
-
+      
       const newFAQ: FAQ = {
         id: `ai-${Date.now()}`,
-        category: 'Geral',
+        category: 'Geral', 
         question: faqSearch,
         answer: answer
       };
-
+      
       const updatedFAQs = [newFAQ, ...dynamicFAQs];
       setDynamicFAQs(updatedFAQs);
       localStorage.setItem('tvde_dynamic_faqs', JSON.stringify(updatedFAQs));
-
+      
       setFaqSearch('');
       setExpandedFAQ(newFAQ.id);
     } catch (error) {
       console.error(error);
-      alert("Erro ao conectar com o Assistente IA. Verifique sua internet.");
+      alert("Erro ao conectar com o Assistente IA. Verifique a sua chave de API ou a sua internet.");
     } finally {
       setIsAskingAI(false);
     }
@@ -520,7 +512,7 @@ Este teste foi realizado através do Simulador TVDE Pro.
         <nav className="hidden md:flex gap-1">
           {[
             { id: AppView.HOME, label: 'Início', icon: Squares2X2Icon },
-            { id: AppView.STUDY_MENU, label: 'Estudar', icon: BookOpenIcon },
+            { id: AppView.STUDY_MENU, label: 'Modo Estudo', icon: BookOpenIcon },
             { id: AppView.HISTORY, label: 'Histórico', icon: ChartBarIcon },
             { id: AppView.INFO_MENU, label: 'Informações', icon: InfoIcon },
             { id: AppView.FAQ_MENU, label: 'Perguntas', icon: ChatBubbleLeftRightIcon },
@@ -529,8 +521,8 @@ Este teste foi realizado através do Simulador TVDE Pro.
               key={item.id}
               onClick={() => handleNavigation(item.id)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
-                currentView === item.id
-                  ? 'bg-indigo-50 text-indigo-700 shadow-sm ring-1 ring-indigo-100'
+                currentView === item.id 
+                  ? 'bg-indigo-50 text-indigo-700 shadow-sm ring-1 ring-indigo-100' 
                   : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
               }`}
             >
@@ -541,7 +533,7 @@ Este teste foi realizado através do Simulador TVDE Pro.
         </nav>
 
         <div className="hidden md:flex items-center gap-3">
-           <button
+           <button 
             onClick={() => setIsSupportOpen(true)}
             className="flex items-center gap-2 px-4 py-2 bg-pink-50 text-pink-600 hover:bg-pink-100 rounded-full text-sm font-medium transition-colors"
           >
@@ -557,7 +549,7 @@ Este teste foi realizado através do Simulador TVDE Pro.
         </div>
 
         <div className="md:hidden flex items-center gap-3">
-          <button
+          <button 
             onClick={() => setIsSupportOpen(true)}
             className="p-2 text-pink-600 bg-pink-50 rounded-full hover:bg-pink-100 transition-colors"
             aria-label="Apoiar"
@@ -573,17 +565,17 @@ Este teste foi realizado através do Simulador TVDE Pro.
           </button>
         </div>
       </div>
-
+      
       {isMobileMenuOpen && (
         <>
-          <div
-            className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[2px]"
+          <div 
+            className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[2px]" 
             onClick={() => setIsMobileMenuOpen(false)}
           />
           <div className="absolute top-16 right-4 z-50 w-64 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 p-2 flex flex-col gap-1 animate-slide-up origin-top-right transform transition-all duration-200">
             {[
               { id: AppView.HOME, label: 'Início', icon: Squares2X2Icon },
-              { id: AppView.STUDY_MENU, label: 'Estudar', icon: BookOpenIcon },
+              { id: AppView.STUDY_MENU, label: 'Modo Estudo', icon: BookOpenIcon },
               { id: AppView.HISTORY, label: 'Histórico', icon: ChartBarIcon },
               { id: AppView.INFO_MENU, label: 'Informações', icon: InfoIcon },
               { id: AppView.FAQ_MENU, label: 'Perguntas', icon: ChatBubbleLeftRightIcon },
@@ -592,8 +584,8 @@ Este teste foi realizado através do Simulador TVDE Pro.
                 key={item.id}
                 onClick={() => handleNavigation(item.id)}
                 className={`w-full px-4 py-3 text-left rounded-xl text-sm font-medium flex items-center gap-3 transition-colors ${
-                  currentView === item.id
-                    ? 'bg-indigo-50 text-indigo-700'
+                  currentView === item.id 
+                    ? 'bg-indigo-50 text-indigo-700' 
                     : 'text-gray-700 hover:bg-gray-50'
                 }`}
               >
@@ -605,7 +597,7 @@ Este teste foi realizado através do Simulador TVDE Pro.
             ))}
             <div className="h-px bg-gray-100 my-1"></div>
             <div className="px-4 py-2 text-xs text-gray-400 text-center">
-              v2.2.0 • Nelberto Gonçalves
+              v1.1.0 • Nelberto Gonçalves
             </div>
           </div>
         </>
@@ -618,13 +610,13 @@ Este teste foi realizado através do Simulador TVDE Pro.
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
         <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden relative animate-slide-up">
-          <button
+          <button 
             onClick={() => setIsSupportOpen(false)}
             className="absolute top-4 right-4 p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors z-10"
           >
             <XMarkIcon className="w-5 h-5 text-gray-600" />
           </button>
-
+          
           <div className="bg-gradient-to-br from-pink-500 to-rose-500 p-8 text-center text-white">
             <div className="bg-white/20 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-md">
               <HeartIcon className="w-8 h-8 text-white" />
@@ -681,161 +673,163 @@ Este teste foi realizado através do Simulador TVDE Pro.
     );
   };
 
-  const renderHome = () => (
-    <div className="space-y-8 animate-fade-in pb-10">
-      <div className="text-center max-w-4xl mx-auto pt-4 px-4">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-50 text-indigo-700 text-sm font-medium mb-4 animate-slide-up">
-          <SparklesIcon className="w-4 h-4" />
-          <span>Atualizado para 2025 • Lei 45/2018</span>
-        </div>
-        <h2 className="text-4xl font-extrabold text-gray-900 tracking-tight mb-4 sm:text-5xl">
-          Prepare-se para o <span className="text-indigo-600">Exame TVDE</span>
-        </h2>
-        <p className="text-lg text-gray-600 mb-8 leading-relaxed max-w-2xl mx-auto">
-          Simulador profissional com inteligência artificial, estatísticas detalhadas e mais de 300 questões oficiais do IMT.
-        </p>
+  const renderHome = () => {
+    const xpProgress = Math.min(100, ((userXP - currentLevel.minXP) / (nextLevel.minXP - currentLevel.minXP)) * 100);
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto mb-8">
-          <StatCard
-            label="Testes Realizados"
-            value={globalStats.totalExams.toLocaleString()}
-            subtext="Total Global"
-            color="blue"
-          />
-          <StatCard
-            label="Utilizadores Online"
-            value={globalStats.activeUsers.toLocaleString()}
-            subtext="Em tempo real"
-            color="green"
-          />
-           <div className="bg-white p-6 rounded-2xl shadow-[0_2px_10px_-4px_rgba(0,0,0,0.1)] border border-gray-100 flex flex-col items-center justify-center text-center transform transition hover:scale-105 duration-200">
-             <span className="text-sm font-semibold text-gray-900 mb-1">O Seu Nível</span>
-             <span className={`text-2xl font-bold text-${currentLevel.color}-600`}>{currentLevel.name}</span>
-             <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
-                <div className={`bg-${currentLevel.color}-500 h-1.5 rounded-full`} style={{ width: `${Math.min(100, (userXP / nextLevel.minXP) * 100)}%` }}></div>
-             </div>
-             <span className="text-xs text-gray-500 mt-1">{userXP} / {nextLevel.minXP} XP</span>
-          </div>
-        </div>
-
-        {smartRecommendation && (
-           <div className="bg-orange-50 border border-orange-100 rounded-2xl p-4 mb-8 flex items-start gap-4 text-left animate-pulse-slow max-w-2xl mx-auto">
-              <div className="bg-orange-100 p-2 rounded-lg text-orange-600 shrink-0">
-                <LightBulbIcon className="w-6 h-6" />
-              </div>
-              <div>
-                <h4 className="font-bold text-gray-900">Recomendação de Estudo</h4>
-                <p className="text-sm text-gray-600">
-                  Detetámos dificuldades em <span className="font-semibold text-orange-700">{smartRecommendation}</span>.
-                  Recomendamos focar o estudo neste módulo.
-                </p>
-                <button
-                  onClick={() => {
-                    handleNavigation(AppView.STUDY_MENU);
-                  }}
-                  className="text-xs font-bold text-orange-600 hover:text-orange-800 mt-1 flex items-center gap-1"
-                >
-                  Estudar agora <ArrowUpIcon className="w-3 h-3 rotate-90" />
-                </button>
-              </div>
-           </div>
-        )}
-
-        <div className="w-full max-w-lg mx-auto bg-white p-8 rounded-2xl shadow-lg border border-gray-100">
-            <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center justify-center gap-2">
-              <PlayIcon className="w-6 h-6 text-indigo-600" />
-              Iniciar Simulação
-            </h3>
-            <div className="space-y-5">
-              <div>
-                <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2 text-left">O seu nome</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <UserIcon className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="text"
-                    id="username"
-                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                    placeholder="Ex: João Silva"
-                    value={userName}
-                    onChange={(e) => setUserName(e.target.value)}
-                  />
+    return (
+      <div className="space-y-8 animate-fade-in pb-10">
+        <div className="text-center max-w-4xl mx-auto pt-4 px-4">
+          
+          {/* GAMIFICATION HEADER */}
+          <div className="bg-white p-6 rounded-3xl shadow-lg border border-indigo-50 mb-8 transform transition hover:-translate-y-1">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-3">
+                <div className={`bg-${currentLevel.color}-100 text-${currentLevel.color}-600 p-3 rounded-2xl`}>
+                  <SparklesIcon className="w-6 h-6" />
+                </div>
+                <div className="text-left">
+                  <div className="text-xs font-bold text-gray-400 uppercase tracking-wider">O seu Nível (Local)</div>
+                  <div className="text-xl font-bold text-gray-900">{currentLevel.name}</div>
                 </div>
               </div>
-              <button
-                onClick={startExam}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-4 rounded-xl shadow-lg hover:shadow-xl hover:shadow-indigo-200 transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
-              >
-                Começar Exame
-              </button>
-              <p className="text-xs text-gray-400 text-center mt-2">
-                30 perguntas • 60 minutos • Aprovação: 27/30
-              </p>
+              <div className="text-right">
+                <div className="text-2xl font-black text-indigo-600">{userXP} <span className="text-sm text-gray-400 font-medium">XP</span></div>
+              </div>
             </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-4xl mx-auto mt-10">
-             <button
-              onClick={() => handleNavigation(AppView.STUDY_MENU)}
-              className="bg-white hover:bg-gray-50 border border-gray-200 p-4 rounded-2xl flex flex-col items-center text-center gap-3 group transition-all hover:shadow-md"
-            >
-              <div className="bg-blue-100 text-blue-600 p-3 rounded-xl group-hover:scale-110 transition-transform">
-                <BookOpenIcon className="w-6 h-6" />
+            
+            <div className="relative pt-2">
+              <div className="flex mb-2 items-center justify-between">
+                <div className="text-xs font-semibold text-gray-500 py-1 px-2 bg-gray-100 rounded-lg">Nível Atual</div>
+                <div className="text-xs font-semibold text-gray-500 py-1 px-2 bg-gray-100 rounded-lg">Próximo: {nextLevel.name}</div>
               </div>
-              <div>
-                <div className="font-bold text-gray-900">Modo de Estudo</div>
-                <div className="text-xs text-gray-500">Pratique por temas</div>
+              <div className="overflow-hidden h-3 mb-1 text-xs flex rounded-full bg-gray-100">
+                <div style={{ width: `${xpProgress}%` }} className={`shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-gradient-to-r from-${currentLevel.color}-400 to-${currentLevel.color}-600 transition-all duration-1000`}></div>
               </div>
-            </button>
-
-            <button
-              onClick={() => handleNavigation(AppView.HISTORY)}
-              className="bg-white hover:bg-gray-50 border border-gray-200 p-4 rounded-2xl flex flex-col items-center text-center gap-3 group transition-all hover:shadow-md"
-            >
-              <div className="bg-purple-100 text-purple-600 p-3 rounded-xl group-hover:scale-110 transition-transform">
-                <ChartBarIcon className="w-6 h-6" />
+              <div className="text-xs text-center text-gray-400 mt-1">
+                Faltam {nextLevel.minXP - userXP} XP para subir de nível
               </div>
-              <div>
-                <div className="font-bold text-gray-900">Meu Progresso</div>
-                <div className="text-xs text-gray-500">Veja a sua evolução</div>
-              </div>
-            </button>
-
-             <button
-              onClick={() => setIsSupportOpen(true)}
-              className="bg-white hover:bg-pink-50 border border-gray-200 hover:border-pink-100 p-4 rounded-2xl flex flex-col items-center text-center gap-3 group transition-all hover:shadow-md"
-            >
-              <div className="bg-pink-100 text-pink-600 p-3 rounded-xl group-hover:scale-110 transition-transform">
-                <HeartIcon className="w-6 h-6" />
-              </div>
-              <div>
-                <div className="font-bold text-gray-900">Apoiar Projeto</div>
-                <div className="text-xs text-gray-500">Contribua connosco</div>
-              </div>
-            </button>
+            </div>
           </div>
+
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-50 text-indigo-700 text-sm font-medium mb-4 animate-slide-up">
+            <SparklesIcon className="w-4 h-4" />
+            <span>Atualizado para 2025 • Lei 45/2018</span>
+          </div>
+          <h2 className="text-4xl font-extrabold text-gray-900 tracking-tight mb-4 sm:text-5xl">
+            Prepare-se para o <span className="text-indigo-600">Exame TVDE</span>
+          </h2>
+          <p className="text-lg text-gray-600 mb-8 leading-relaxed max-w-2xl mx-auto">
+            Escolha o seu modo de preparação. Treine com feedback imediato ou simule o exame oficial.
+          </p>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto mb-8">
+            <StatCard 
+              label="Exames Totais" 
+              value={communityStats.totalExams.toLocaleString()} 
+              subtext="Atualizado em tempo real" 
+              color="blue"
+              live={true}
+            />
+            <StatCard 
+              label="Usuários Online" 
+              value={communityStats.activeUsers.toLocaleString()} 
+              subtext="Agora mesmo" 
+              color="green"
+              live={true}
+            />
+            <StatCard 
+              label="Questões Ativas" 
+              value="300+" 
+              subtext="Banco oficial IMT" 
+              color="purple"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+              {/* MODO EXAME CARD */}
+              <div className="bg-white p-8 rounded-3xl shadow-xl border-2 border-indigo-100 hover:border-indigo-500 transition-all group flex flex-col">
+                  <div className="flex items-center justify-center mb-6">
+                     <div className="bg-indigo-100 text-indigo-600 w-16 h-16 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <PlayIcon className="w-8 h-8" />
+                     </div>
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">Modo Exame (Oficial)</h3>
+                  <ul className="text-left text-sm text-gray-600 space-y-2 mb-6 bg-gray-50 p-4 rounded-xl">
+                     <li className="flex items-center gap-2"><ClockIcon className="w-4 h-4" /> Cronómetro (60 min)</li>
+                     <li className="flex items-center gap-2"><Squares2X2Icon className="w-4 h-4" /> 30 Perguntas Reais</li>
+                     <li className="flex items-center gap-2"><EyeIcon className="w-4 h-4" /> Sem ajudas (Resultado no fim)</li>
+                  </ul>
+                  <div className="mt-auto space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1 text-left ml-1">Nome do Candidato</label>
+                      <input
+                          type="text"
+                          className="block w-full px-4 py-3 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          placeholder="Insira o seu nome"
+                          value={userName}
+                          onChange={(e) => setUserName(e.target.value)}
+                        />
+                    </div>
+                    <button
+                      onClick={startExam}
+                      className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl shadow-lg hover:shadow-indigo-200 transition-all flex items-center justify-center gap-2"
+                    >
+                      Iniciar Exame <ChevronRightIcon className="w-5 h-5" />
+                    </button>
+                  </div>
+              </div>
+
+              {/* MODO ESTUDO CARD */}
+              <div className="bg-white p-8 rounded-3xl shadow-xl border-2 border-teal-100 hover:border-teal-500 transition-all group flex flex-col">
+                  <div className="flex items-center justify-center mb-6">
+                     <div className="bg-teal-100 text-teal-600 w-16 h-16 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <BookOpenIcon className="w-8 h-8" />
+                     </div>
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">Modo Estudo / Testes</h3>
+                  <p className="text-gray-500 text-sm mb-6">
+                    Ideal para aprender. Veja a resposta correta imediatamente e entenda os erros.
+                  </p>
+                  <ul className="text-left text-sm text-gray-600 space-y-2 mb-6 bg-gray-50 p-4 rounded-xl">
+                     <li className="flex items-center gap-2"><CheckCircleIcon className="w-4 h-4 text-green-500" /> Feedback Imediato (Certo/Errado)</li>
+                     <li className="flex items-center gap-2"><LightBulbIcon className="w-4 h-4 text-yellow-500" /> Explicação das respostas</li>
+                     <li className="flex items-center gap-2"><ArrowUpIcon className="w-4 h-4" /> Sem pressão de tempo</li>
+                  </ul>
+                  <div className="mt-auto">
+                    <button
+                      onClick={() => handleNavigation(AppView.STUDY_MENU)}
+                      className="w-full bg-white border-2 border-teal-500 text-teal-700 hover:bg-teal-50 font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2"
+                    >
+                      Ir para Modo Estudo <ChevronRightIcon className="w-5 h-5" />
+                    </button>
+                  </div>
+              </div>
+          </div>
+
+          <div className="flex justify-center mt-8">
+              <button 
+                onClick={() => handleNavigation(AppView.HISTORY)}
+                className="text-gray-500 hover:text-indigo-600 font-medium flex items-center gap-2 transition-colors"
+              >
+                <HistoryIcon className="w-5 h-5" />
+                Ver meu histórico de exames (Local)
+              </button>
+          </div>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderExam = () => {
     if (questions.length === 0) return <div>A carregar exame...</div>;
-
+    
     const q = questions[currentQuestionIndex];
-    const isAnswered = !!answers[currentQuestionIndex];
     const isLastQuestion = currentQuestionIndex === questions.length - 1;
-
-    // Real-time stats calculation for the header
-    const totalAnswered = Object.keys(answers).length;
-    const correctCount = Object.keys(answers).reduce((acc, idx) => {
-        const qIndex = parseInt(idx);
-        return answers[qIndex] === questions[qIndex].correct ? acc + 1 : acc;
-    }, 0);
-    const wrongCount = totalAnswered - correctCount;
+    const isAnswered = !!answers[currentQuestionIndex];
 
     return (
       <div className="max-w-3xl mx-auto pb-24 animate-fade-in">
+        {/* Header Card with Timer and Progress */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 mb-6 flex flex-wrap gap-4 items-center justify-between sticky top-20 z-30">
           <div className="flex items-center gap-3">
              <div className="bg-indigo-100 text-indigo-700 w-10 h-10 rounded-full flex items-center justify-center font-bold">
@@ -844,17 +838,9 @@ Este teste foi realizado através do Simulador TVDE Pro.
              <div className="text-sm text-gray-500">de {questions.length}</div>
           </div>
 
-          {/* Real-time Stats Badge */}
-          <div className="flex items-center gap-3 px-3 py-1.5 bg-gray-50 rounded-xl border border-gray-100 shadow-sm">
-              <div className="flex items-center gap-1.5 text-green-600 font-bold" title="Respostas Corretas">
-                 <CheckCircleIcon className="w-5 h-5" />
-                 <span>{correctCount}</span>
-              </div>
-              <div className="w-px h-4 bg-gray-300"></div>
-              <div className="flex items-center gap-1.5 text-red-600 font-bold" title="Respostas Incorretas">
-                 <XCircleIcon className="w-5 h-5" />
-                 <span>{wrongCount}</span>
-              </div>
+          <div className="px-3 py-1.5 bg-gray-100 rounded-xl border border-gray-200 text-xs font-bold uppercase text-gray-600 flex items-center gap-2">
+              <Squares2X2Icon className="w-4 h-4" />
+              Modo Exame
           </div>
 
           <QuizTimer secondsLeft={timeLeft} setSecondsLeft={setTimeLeft} onTimeUp={() => finishExam(true)} />
@@ -862,11 +848,12 @@ Este teste foi realizado através do Simulador TVDE Pro.
 
         <div className="bg-white rounded-3xl shadow-xl border border-gray-200 overflow-hidden">
           <div className="p-6 sm:p-10">
+              {/* Category & Audio */}
               <div className="flex items-center justify-between mb-6">
                 <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 uppercase tracking-wide">
                   {q.category}
                 </span>
-                <button
+                <button 
                   onClick={() => speakQuestion(q.question, q.options)}
                   className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors"
                 >
@@ -874,43 +861,38 @@ Este teste foi realizado através do Simulador TVDE Pro.
                 </button>
               </div>
 
+              {/* Question Image Support */}
+              {q.imageUrl && (
+                <div className="mb-6 rounded-xl overflow-hidden border border-gray-200 bg-gray-50 flex justify-center">
+                   <img src={q.imageUrl} alt="Imagem da questão" className="max-h-64 object-contain" />
+                </div>
+              )}
+
+              {/* Question */}
               <h3 className="text-xl sm:text-2xl font-bold text-gray-900 leading-relaxed mb-8">
                 {q.question}
               </h3>
-
+            
+            {/* Options */}
             <div className="space-y-3">
               {q.options.map((opt, idx) => {
                 const selectedAnswer = answers[currentQuestionIndex];
                 const isSelected = selectedAnswer === opt;
-                const isCorrect = opt === q.correct;
-
-                let btnClass = 'border-gray-100 hover:bg-gray-50';
+                
+                let btnClass = 'border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 cursor-pointer hover:shadow-sm';
                 let iconClass = 'bg-white border-gray-300 text-gray-500';
                 let textClass = 'text-gray-700';
 
-                if (isAnswered) {
-                  if (isCorrect) {
-                    // Correct answer always green
-                    btnClass = 'border-green-500 bg-green-50';
-                    iconClass = 'bg-green-500 border-green-500 text-white';
-                    textClass = 'text-green-800 font-semibold';
-                  } else if (isSelected && !isCorrect) {
-                    // Selected wrong answer red
-                    btnClass = 'border-red-500 bg-red-50';
-                    iconClass = 'bg-red-500 border-red-500 text-white';
-                    textClass = 'text-red-800 font-semibold';
-                  } else {
-                    btnClass = 'border-gray-100 opacity-50';
-                  }
-                } else {
-                  btnClass = 'border-gray-200 hover:border-indigo-300 hover:bg-indigo-50';
+                if (isSelected) {
+                    btnClass = 'border-indigo-600 bg-indigo-50 shadow-md';
+                    iconClass = 'bg-indigo-600 border-indigo-600 text-white';
+                    textClass = 'text-indigo-900 font-bold';
                 }
 
                 return (
                   <button
                     key={idx}
                     onClick={() => handleAnswerSelect(opt)}
-                    disabled={isAnswered}
                     className={`w-full text-left p-5 rounded-2xl border-2 transition-all duration-200 flex items-start gap-4 group ${btnClass}`}
                   >
                     <div className={`w-6 h-6 mt-0.5 rounded-full flex items-center justify-center text-xs font-bold border transition-colors shrink-0 ${iconClass}`}>
@@ -919,21 +901,20 @@ Este teste foi realizado através do Simulador TVDE Pro.
                     <span className={`text-base ${textClass}`}>
                       {opt}
                     </span>
-                    {isAnswered && isCorrect && <CheckCircleIcon className="w-6 h-6 text-green-600 ml-auto" />}
-                    {isAnswered && isSelected && !isCorrect && <XCircleIcon className="w-6 h-6 text-red-600 ml-auto" />}
                   </button>
                 );
               })}
             </div>
           </div>
-
+          
+          {/* Action Bar - Navegação Profissional */}
           <div className="bg-gray-50 px-6 py-6 border-t border-gray-100 flex justify-between items-center">
             <button
               onClick={prevQuestion}
               disabled={currentQuestionIndex === 0}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-                currentQuestionIndex === 0
-                  ? 'text-gray-300 cursor-not-allowed'
+                currentQuestionIndex === 0 
+                  ? 'text-gray-300 cursor-not-allowed' 
                   : 'text-gray-600 hover:bg-gray-200 hover:text-gray-900'
               }`}
             >
@@ -941,22 +922,39 @@ Este teste foi realizado através do Simulador TVDE Pro.
             </button>
 
             {isLastQuestion ? (
-              <button
+               <button
                 onClick={handleFinishExamClick}
-                className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-green-200 transition-all transform hover:-translate-y-0.5 flex items-center gap-2"
+                className="px-8 py-3 rounded-xl font-bold shadow-lg transition-all transform flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white hover:-translate-y-0.5 shadow-green-200"
               >
                 Finalizar Prova <CheckCircleIcon className="w-5 h-5" />
               </button>
             ) : (
               <button
                 onClick={nextQuestion}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-2"
+                disabled={!isAnswered} // Bloqueio visual para garantir resposta
+                className={`px-6 py-3 rounded-xl font-bold shadow-md transition-all flex items-center gap-2 ${
+                   !isAnswered 
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none' 
+                    : 'bg-indigo-600 hover:bg-indigo-700 text-white hover:shadow-lg'
+                }`}
               >
+                {!isAnswered && <LockClosedIcon className="w-4 h-4" />}
                 Próxima <ChevronRightIcon className="w-5 h-5" />
               </button>
             )}
           </div>
         </div>
+        
+        {!isLastQuestion && (
+             <div className="mt-8 text-center">
+                <button 
+                  onClick={handleFinishExamClick}
+                  className="text-red-400 hover:text-red-600 text-sm font-medium underline"
+                >
+                  Entregar prova agora
+                </button>
+             </div>
+        )}
       </div>
     );
   };
@@ -964,20 +962,23 @@ Este teste foi realizado através do Simulador TVDE Pro.
   const renderResults = () => {
     if (!lastResult) return null;
     const percentage = Math.round((lastResult.score / lastResult.total) * 100);
-
+    const earnedXP = lastResult.score + (lastResult.passed ? 50 : 0);
+    
     return (
-      <div className="max-w-3xl mx-auto text-center animate-slide-up pb-10">
+      <div className="max-w-3xl mx-auto text-center animate-slide-up pb-10 relative">
+        {showConfetti && <Confetti />}
+        
         <div className={`inline-block p-4 rounded-full mb-6 ${lastResult.passed ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
            {lastResult.passed ? <CheckCircleIcon className="w-16 h-16" /> : <XCircleIcon className="w-16 h-16" />}
         </div>
-
+        
         <h2 className="text-4xl font-extrabold text-gray-900 mb-2">
-          {lastResult.passed ? 'Parabéns! Aprovado' : 'Não foi desta vez'}
+          {lastResult.passed ? 'APROVADO!' : 'REPROVADO'}
         </h2>
         <p className="text-gray-500 mb-8">
-          {lastResult.passed
-            ? `Excelente desempenho, ${lastResult.userName}! Você dominou o conteúdo.`
-            : `Continue a estudar, ${lastResult.userName}. A prática leva à perfeição.`}
+          {lastResult.passed 
+            ? `Parabéns, ${lastResult.userName}! Dominou o conteúdo.` 
+            : `Não desanime, ${lastResult.userName}. Reveja os erros e tente novamente.`}
         </p>
 
         <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden mb-8">
@@ -995,6 +996,12 @@ Este teste foi realizado através do Simulador TVDE Pro.
                   <div className="text-sm font-medium text-gray-500 uppercase tracking-wide">Percentagem</div>
                 </div>
              </div>
+             
+             {/* XP REWARD BADGE */}
+             <div className="mb-8 inline-flex items-center gap-2 bg-yellow-50 text-yellow-700 px-6 py-2 rounded-full border border-yellow-200 animate-pulse-slow">
+                <SparklesIcon className="w-5 h-5 text-yellow-500" />
+                <span className="font-bold">+{earnedXP} XP Ganhos!</span>
+             </div>
 
              <div className="flex flex-col gap-3">
                 <button
@@ -1004,7 +1011,7 @@ Este teste foi realizado através do Simulador TVDE Pro.
                   <EyeIcon className="w-5 h-5" />
                   Rever Respostas Erradas
                 </button>
-
+                
                 <div className="grid grid-cols-2 gap-3">
                    <button
                     onClick={shareResultByEmail}
@@ -1032,28 +1039,47 @@ Este teste foi realizado através do Simulador TVDE Pro.
              </button>
           </div>
         </div>
-
-        <button
-          onClick={startExam}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-8 rounded-2xl shadow-lg shadow-indigo-200 transition-all transform hover:-translate-y-1 flex items-center gap-2 mx-auto"
-        >
-          <PlayIcon className="w-6 h-6" />
-          Realizar Novo Teste
-        </button>
       </div>
     );
   };
 
   const renderStudyMenu = () => {
     const categories: string[] = Array.from(new Set(MOCK_QUESTIONS.map(q => q.category || 'Geral')));
-    categories.unshift('Todos');
 
     return (
-      <div className="max-w-4xl mx-auto animate-fade-in">
+      <div className="max-w-4xl mx-auto animate-fade-in pb-10">
+         <button 
+            onClick={() => handleNavigation(AppView.HOME)} 
+            className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900 font-medium transition-colors"
+         >
+            <ChevronLeftIcon className="w-5 h-5" /> Voltar ao Início
+         </button>
+
          <div className="text-center mb-10">
            <h2 className="text-3xl font-bold text-gray-900 mb-2">Modo de Estudo</h2>
-           <p className="text-gray-500">Escolha um tema específico para praticar sem pressão de tempo.</p>
+           <p className="text-gray-500">Treine com feedback imediato. Escolha uma opção:</p>
          </div>
+        
+         {/* Botão Especial para Teste Geral em Modo Estudo */}
+         <button
+            onClick={startGeneralStudy}
+            className="w-full bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white p-6 rounded-2xl text-left shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1 mb-8 group"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                 <div className="bg-white/20 p-3 rounded-xl">
+                    <Squares2X2Icon className="w-8 h-8 text-white" />
+                 </div>
+                 <div>
+                    <h3 className="text-xl font-bold">Simulado Geral (Modo Treino)</h3>
+                    <p className="text-teal-100 text-sm">30 perguntas aleatórias com correção imediata.</p>
+                 </div>
+              </div>
+              <ChevronRightIcon className="w-6 h-6 text-white/70 group-hover:text-white" />
+            </div>
+         </button>
+
+         <h3 className="text-lg font-bold text-gray-900 mb-4">Ou estude por categoria:</h3>
 
          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {categories.map(cat => (
@@ -1064,10 +1090,10 @@ Este teste foi realizado através do Simulador TVDE Pro.
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="bg-indigo-100 text-indigo-600 p-2 rounded-lg group-hover:scale-110 transition-transform">
-                     {cat === 'Todos' ? <Squares2X2Icon className="w-6 h-6" /> : <BookOpenIcon className="w-6 h-6" />}
+                     <BookOpenIcon className="w-6 h-6" />
                   </div>
                   <span className="bg-gray-100 text-gray-600 text-xs font-bold px-2 py-1 rounded-full">
-                    {cat === 'Todos' ? MOCK_QUESTIONS.length : MOCK_QUESTIONS.filter(q => q.category === cat).length} Q
+                    {MOCK_QUESTIONS.filter(q => q.category === cat).length} Q
                   </span>
                 </div>
                 <h3 className="text-lg font-bold text-gray-900 group-hover:text-indigo-700">{cat}</h3>
@@ -1085,27 +1111,57 @@ Este teste foi realizado através do Simulador TVDE Pro.
     const isCorrect = studyAnswer === q.correct;
 
     return (
-      <div className="max-w-3xl mx-auto animate-fade-in">
+      <div className="max-w-3xl mx-auto animate-fade-in pb-24">
         <div className="flex justify-between items-center mb-6">
-          <button onClick={() => handleNavigation(AppView.STUDY_MENU)} className="text-gray-500 hover:text-gray-900 flex items-center gap-1">
-             <ChevronLeftIcon className="w-4 h-4" /> Voltar
+          <button 
+            onClick={() => handleQuitSession(false)} 
+            className="text-gray-500 hover:text-gray-900 flex items-center gap-1 font-medium px-3 py-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+             <ChevronLeftIcon className="w-5 h-5" /> Voltar ao Menu
           </button>
-          <span className="bg-indigo-100 text-indigo-800 text-xs font-bold px-3 py-1 rounded-full">
+          
+          <span className="hidden sm:block bg-teal-100 text-teal-800 text-xs font-bold px-3 py-1 rounded-full uppercase">
+             {studyCategory} • {currentStudyIndex + 1}/{studyQuestions.length}
+          </span>
+
+          <button 
+            onClick={() => handleQuitSession(true)} 
+            className="text-gray-400 hover:text-red-600 flex items-center gap-1 font-medium px-3 py-2 hover:bg-red-50 rounded-lg transition-colors" 
+            title="Sair Imediatamente"
+          >
+             <span className="text-sm hidden sm:inline">Sair</span> <XMarkIcon className="w-6 h-6" />
+          </button>
+        </div>
+
+        <div className="sm:hidden text-center mb-4">
+           <span className="bg-teal-100 text-teal-800 text-xs font-bold px-3 py-1 rounded-full uppercase">
              {studyCategory} • {currentStudyIndex + 1}/{studyQuestions.length}
           </span>
         </div>
 
-        <div className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden p-8 mb-6">
-           <h3 className="text-xl font-bold text-gray-900 mb-6">{q.question}</h3>
+        <div className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden p-8 mb-6 relative">
+           {/* Indicador de Estudo */}
+           <div className="absolute top-0 right-0 bg-teal-500 text-white text-xs font-bold px-3 py-1 rounded-bl-xl">
+              MODO TREINO
+           </div>
 
+           {/* Image Support */}
+           {q.imageUrl && (
+              <div className="mb-6 mt-4 rounded-xl overflow-hidden border border-gray-200 bg-gray-50 flex justify-center">
+                 <img src={q.imageUrl} alt="Imagem da questão" className="max-h-64 object-contain" />
+              </div>
+           )}
+
+           <h3 className="text-xl font-bold text-gray-900 mb-6 mt-2">{q.question}</h3>
+           
            <div className="space-y-3">
              {q.options.map((opt, idx) => {
                const isSelected = studyAnswer === opt;
                const isRight = opt === q.correct;
-
+               
                let btnClass = 'border-gray-100 hover:bg-gray-50';
                let iconClass = 'bg-gray-100 text-gray-500';
-
+               
                if (isAnswered) {
                  if (isRight) {
                    btnClass = 'border-green-200 bg-green-50';
@@ -1156,12 +1212,12 @@ Este teste foi realizado através do Simulador TVDE Pro.
             onClick={nextStudyQuestion}
             disabled={!isAnswered}
             className={`px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all ${
-              isAnswered
-               ? 'bg-indigo-600 text-white shadow-lg hover:bg-indigo-700'
+              isAnswered 
+               ? 'bg-teal-600 text-white shadow-lg hover:bg-teal-700' 
                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
             }`}
           >
-            {currentStudyIndex < studyQuestions.length - 1 ? 'Próxima' : 'Concluir'} <ChevronRightIcon className="w-5 h-5" />
+            {currentStudyIndex < studyQuestions.length - 1 ? 'Próxima Pergunta' : 'Concluir Treino'} <ChevronRightIcon className="w-5 h-5" />
           </button>
         </div>
       </div>
@@ -1183,7 +1239,7 @@ Este teste foi realizado através do Simulador TVDE Pro.
               A ferramenta mais completa para a preparação de motoristas TVDE em Portugal. Baseado na Lei 45/2018 e atualizado para 2025.
             </p>
           </div>
-
+          
           <div>
             <h4 className="text-white font-bold mb-4">Links Rápidos</h4>
             <ul className="space-y-2 text-sm">
@@ -1196,16 +1252,7 @@ Este teste foi realizado através do Simulador TVDE Pro.
           <div>
             <h4 className="text-white font-bold mb-4">Suporte</h4>
             <ul className="space-y-2 text-sm">
-              <li>
-                <button onClick={() => setIsSupportOpen(true)} className="hover:text-pink-400 transition-colors flex items-center gap-2">
-                  <HeartIcon className="w-4 h-4" /> Apoiar Projeto
-                </button>
-              </li>
-              <li>
-                <a href="mailto:suporte@tvdepro.pt" className="hover:text-white transition-colors flex items-center gap-2">
-                  <EnvelopeIcon className="w-4 h-4" /> suporte@tvdepro.pt
-                </a>
-              </li>
+              <li><button onClick={() => setIsSupportOpen(true)} className="hover:text-pink-400 transition-colors flex items-center gap-2"><HeartIcon className="w-4 h-4" /> Apoiar Projeto</button></li>
               <li><a href="#" className="hover:text-white transition-colors">Termos de Uso</a></li>
               <li><a href="#" className="hover:text-white transition-colors">Política de Privacidade</a></li>
             </ul>
@@ -1217,8 +1264,8 @@ Este teste foi realizado através do Simulador TVDE Pro.
             <p className="text-xs text-slate-500">© 2025 Simulador TVDE Pro. Todos os direitos reservados.</p>
             <p className="text-xs text-indigo-400 mt-1 font-medium">Designer by Nelberto Gonçalves</p>
           </div>
-
-          <button
+          
+          <button 
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-full text-sm transition-colors"
           >
@@ -1232,7 +1279,6 @@ Este teste foi realizado através do Simulador TVDE Pro.
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f8fafc] text-slate-900 font-sans selection:bg-indigo-100 selection:text-indigo-700">
-      {showConfetti && <Confetti />}
       {renderHeader()}
       {renderSupportModal()}
 
@@ -1250,7 +1296,7 @@ Este teste foi realizado através do Simulador TVDE Pro.
                  <div className="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                    <HistoryIcon className="w-8 h-8 text-gray-400" />
                  </div>
-                 <p className="text-gray-500">Ainda não realizou nenhum exame.</p>
+                 <p className="text-gray-500">Ainda não realizou nenhum exame neste dispositivo.</p>
                </div>
              ) : (
                <div className="space-y-4">
@@ -1284,7 +1330,7 @@ Este teste foi realizado através do Simulador TVDE Pro.
                <ChevronLeftIcon className="w-5 h-5" /> Voltar
              </button>
              <h2 className="text-2xl font-bold mb-6">Revisão de Erros</h2>
-
+             
              {reviewData.mistakes.length === 0 ? (
                <div className="bg-green-50 p-8 rounded-2xl text-center text-green-800 border border-green-100">
                  <SparklesIcon className="w-12 h-12 mx-auto mb-4 text-green-500" />
@@ -1299,6 +1345,12 @@ Este teste foi realizado através do Simulador TVDE Pro.
                       <div className="ml-2">
                          <span className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 block">{mistake.question.category}</span>
                          <h3 className="font-bold text-lg text-gray-900 mb-4">{mistake.question.question}</h3>
+
+                         {mistake.question.imageUrl && (
+                            <div className="mb-4 rounded-lg overflow-hidden border border-gray-200">
+                              <img src={mistake.question.imageUrl} alt="Contexto visual" className="max-h-40 object-contain mx-auto" />
+                            </div>
+                         )}
                          
                          <div className="space-y-2">
                            <div className="p-3 bg-red-50 rounded-lg border border-red-100">
