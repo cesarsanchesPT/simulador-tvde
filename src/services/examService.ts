@@ -1,6 +1,6 @@
 
-import { MOCK_QUESTIONS, EXAM_CONFIG } from '../constants';
-import { LegacyQuestion, ExamResult } from '../types';
+import { MOCK_QUESTIONS } from '../constants';
+import { Question, ExamResult, EXAM_CONFIG } from '../types';
 
 // Utility to shuffle array
 const shuffleArray = <T,>(array: T[]): T[] => {
@@ -22,9 +22,9 @@ const CATEGORY_TARGETS = {
   'Segurança e Socorro': 4           // SEPS - Segurança e Primeiros Socorros
 };
 
-export const generateExam = (): LegacyQuestion[] => {
+export const generateExam = (): Question[] => {
   // 1. Agrupar todas as questões por categoria normalizada
-  const pool: Record<string, LegacyQuestion[]> = {
+  const pool: Record<string, Question[]> = {
     'Código da Estrada': [],
     'Lei TVDE': [],
     'Comunicação e Turismo': [],
@@ -54,7 +54,7 @@ export const generateExam = (): LegacyQuestion[] => {
     pool[cat].push(q);
   });
 
-  let selectedQuestions: LegacyQuestion[] = [];
+  let selectedQuestions: Question[] = [];
   const usedIds = new Set<string>();
 
   // 2. Selecionar perguntas baseadas na distribuição oficial
@@ -90,16 +90,10 @@ export const generateExam = (): LegacyQuestion[] => {
 const STORAGE_KEY = 'tvde_exam_history_v2';
 
 export const saveExamResult = (result: ExamResult): void => {
-  try {
-    const currentHistory = getExamHistory();
-    const newHistory = [result, ...currentHistory];
-    if (newHistory.length > 50) newHistory.pop();
-    
-    // Saving to localStorage automatically triggers 'storage' events in OTHER tabs
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newHistory));
-  } catch (error) {
-    console.warn("Falha ao guardar histórico. Modo privado ou armazenamento cheio?", error);
-  }
+  const currentHistory = getExamHistory();
+  const newHistory = [result, ...currentHistory];
+  if (newHistory.length > 50) newHistory.pop();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(newHistory));
 };
 
 export const getExamHistory = (): ExamResult[] => {

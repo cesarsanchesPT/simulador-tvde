@@ -1,10 +1,5 @@
-import { LegacyQuestion, InfoModule, FAQ } from './types';
 
-export const EXAM_CONFIG = {
-  TOTAL_QUESTIONS: 30,
-  PASS_SCORE: 27,
-  DURATION_MINUTES: 60
-};
+import { Question, InfoModule, FAQ } from './types';
 
 export const TVDE_FAQS: FAQ[] = [
   {
@@ -267,7 +262,7 @@ export const INFO_MODULES: InfoModule[] = [
   }
 ];
 
-export const MOCK_QUESTIONS: LegacyQuestion[] = [
+export const MOCK_QUESTIONS: Question[] = [
   // ==========================================
   // QUESTÕES DE EXAME PRIORITÁRIAS (NOVAS)
   // Foco: Prioridades, Lei 45/2018, Comportamento
