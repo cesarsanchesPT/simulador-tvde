@@ -32,20 +32,20 @@ export interface GlobalStats {
 // --- TIPOS NOVOS (Motor Universal) ---
 export interface Question {
   id: string;
-  text: string; // Texto da pergunta
-  options: string[]; // Lista de opções
-  correctIndex: number; // Índice da resposta correta (0-3)
-  explanation?: string; // Explicação para modo estudo
+  text: string;
+  options: string[];
+  correctIndex: number;
+  explanation?: string;
   category: string;
   imageUrl?: string;
 }
 
-// --- TIPOS LEGADO (Para compatibilidade com constants.ts) ---
+// --- TIPOS LEGADO (Para compatibilidade) ---
 export interface LegacyQuestion {
   id: string;
   question: string;
   options: string[];
-  correct: string; // Resposta correta em texto
+  correct: string;
   category: string;
   imageUrl?: string;
 }
@@ -59,7 +59,7 @@ export interface AnswerRecord {
 
 export interface MistakeRecord {
   question: Question;
-  selectedAnswer: string; // Texto da resposta selecionada
+  selectedAnswer: string;
   isCorrect: boolean;
 }
 
@@ -74,7 +74,6 @@ export interface ExamResult {
   mistakes: MistakeRecord[];
 }
 
-// --- TIPOS GERAIS ---
 export interface InfoModule {
   id: string;
   title: string;

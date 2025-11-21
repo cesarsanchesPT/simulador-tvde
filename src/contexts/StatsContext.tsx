@@ -1,12 +1,12 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { ExamResult, UserStats, GlobalStats } from '../types';
 import { getExamHistory, saveExamResult } from '../services/examService';
 
 interface StatsContextType {
   history: ExamResult[];
   stats: UserStats;
-  globalStats: GlobalStats; // Dados "live" da comunidade
+  globalStats: GlobalStats;
   addResult: (result: ExamResult) => void;
 }
 
@@ -59,27 +59,35 @@ const calculateStats = (history: ExamResult[]): UserStats => {
 export const StatsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [history, setHistory] = useState<ExamResult[]>([]);
   const [stats, setStats] = useState<UserStats>(calculateStats([]));
-  
-  // Simulação de Dados Globais (Fake Live Data)
   const [globalStats, setGlobalStats] = useState<GlobalStats>({
     activeUsers: 124,
     totalExams: 15420,
     passRate: 68
   });
+  
+  const [channel, setChannel] = useState<BroadcastChannel | null>(null);
 
-  // Broadcast Channel para sincronização entre abas
-  const [channel] = useState(() => new BroadcastChannel('tvde_sync_channel'));
-
-  const refreshData = () => {
+  // Função estável para recarregar dados
+  const refreshData = useCallback(() => {
     const loadedHistory = getExamHistory();
     setHistory(loadedHistory);
     setStats(calculateStats(loadedHistory));
-  };
+  }, []);
 
   useEffect(() => {
     refreshData();
+    
+    // Configurar BroadcastChannel para sincronização entre abas
+    const bc = new BroadcastChannel('tvde_sync_channel');
+    bc.onmessage = (event) => {
+      if (event.data.type === 'UPDATE_HISTORY') {
+        console.log("Sincronização recebida de outra aba.");
+        refreshData();
+      }
+    };
+    setChannel(bc);
 
-    // 1. Listener para Storage (fallback)
+    // Configurar Listener de Storage (Fallback para alguns browsers)
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'tvde_exam_history_v2') {
         refreshData();
@@ -87,20 +95,11 @@ export const StatsProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
     window.addEventListener('storage', handleStorageChange);
 
-    // 2. Listener para BroadcastChannel (Instantâneo)
-    channel.onmessage = (event) => {
-      if (event.data.type === 'UPDATE_HISTORY') {
-        refreshData();
-      }
-    };
-
-    // 3. Simulação de Atividade Global ("Live")
+    // Simulação de "Dados em Tempo Real" (Global)
     const interval = setInterval(() => {
       setGlobalStats(prev => {
-        // Aleatoriamente aumenta o número de exames ou muda utilizadores ativos
         const changeUsers = Math.random() > 0.5 ? Math.floor(Math.random() * 5) - 2 : 0;
         const newExams = Math.random() > 0.7 ? 1 : 0;
-        
         return {
           ...prev,
           activeUsers: Math.max(50, prev.activeUsers + changeUsers),
@@ -110,17 +109,19 @@ export const StatsProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }, 3000);
 
     return () => {
+      bc.close();
       window.removeEventListener('storage', handleStorageChange);
       clearInterval(interval);
-      channel.close();
     };
-  }, [channel]);
+  }, [refreshData]);
 
   const addResult = (result: ExamResult) => {
     saveExamResult(result);
-    refreshData(); // Update local state
-    // Notificar outras abas
-    channel.postMessage({ type: 'UPDATE_HISTORY' });
+    refreshData();
+    // Notificar outras abas imediatamente
+    if (channel) {
+      channel.postMessage({ type: 'UPDATE_HISTORY' });
+    }
   };
 
   return (

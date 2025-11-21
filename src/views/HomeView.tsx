@@ -14,6 +14,24 @@ const IconMap: Record<string, any> = {
   Fire: SpeakerWaveIcon 
 };
 
+interface StatCardProps {
+  label: string;
+  value: string;
+  subtext: string;
+  color?: string;
+}
+
+const StatCard = ({ label, value, subtext, color = "indigo" }: StatCardProps) => (
+  <div className={`bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10`}>
+    <div className={`flex items-center gap-2 mb-2 text-${color}-300`}>
+      <ChartBarIcon className="w-4 h-4" />
+      <span className="text-xs font-bold uppercase">{label}</span>
+    </div>
+    <div className="text-2xl font-black text-white">{value}</div>
+    <div className="text-xs text-gray-400 mt-1">{subtext}</div>
+  </div>
+);
+
 interface HomeViewProps {
   onSelectCategory: (category: ExamCategory) => void;
   onOpenSupport?: () => void;
@@ -86,13 +104,12 @@ export const HomeView: React.FC<HomeViewProps> = ({ onSelectCategory, onOpenSupp
            {/* Stats Grid - Responsive */}
            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 w-full lg:w-auto">
               {/* Global Stat 1 */}
-              <div className="bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10">
-                 <div className="flex items-center gap-2 mb-2 text-indigo-300">
-                    <ChartBarIcon className="w-4 h-4" />
-                    <span className="text-xs font-bold uppercase">Aprovação Global</span>
-                 </div>
-                 <div className="text-2xl font-black text-white">{globalStats.passRate}%</div>
-              </div>
+              <StatCard 
+                label="Aprovação Global" 
+                value={`${globalStats.passRate}%`} 
+                subtext="Média nacional" 
+                color="blue"
+              />
 
               {/* Personal Stat 1 */}
               <div className="bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10">
@@ -101,6 +118,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onSelectCategory, onOpenSupp
                     <span className="text-xs font-bold uppercase">Seus Exames</span>
                  </div>
                  <div className="text-2xl font-black text-white">{stats.totalExams}</div>
+                 <div className="text-xs text-gray-400 mt-1">Realizados</div>
               </div>
 
               {/* Personal Stat 2 */}
@@ -110,6 +128,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onSelectCategory, onOpenSupp
                     <span className="text-xs font-bold uppercase">Sua Média</span>
                  </div>
                  <div className="text-2xl font-black text-white">{stats.averageScore}%</div>
+                 <div className="text-xs text-gray-400 mt-1">Pontuação</div>
               </div>
            </div>
          </div>
