@@ -79,6 +79,8 @@ const App: React.FC = () => {
           <ExamView 
             examTitle={selectedCategory?.title || 'Exame Geral TVDE'}
             categoryId={selectedCategory?.id || 'tvde'}
+            duration={selectedCategory?.examDurationMinutes || 60}
+            totalQuestions={selectedCategory?.questionsPerExam || 30}
             onFinish={(result) => {
               setLastResult(result);
               if(result.passed) { setShowConfetti(true); setTimeout(() => setShowConfetti(false), 5000); }

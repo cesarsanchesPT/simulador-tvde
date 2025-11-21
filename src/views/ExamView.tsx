@@ -11,35 +11,48 @@ import QuizTimer from '../components/QuizTimer';
 interface ExamViewProps {
   examTitle?: string;
   categoryId?: string;
+  duration?: number; // in minutes
+  totalQuestions?: number;
   onFinish: (result: ExamResult) => void;
   onExit: () => void;
 }
 
-export const ExamView: React.FC<ExamViewProps> = ({ examTitle = "Exame TVDE", categoryId = "tvde", onFinish, onExit }) => {
+export const ExamView: React.FC<ExamViewProps> = ({ 
+  examTitle = "Exame TVDE", 
+  categoryId = "tvde", 
+  duration = 60,
+  totalQuestions = 30,
+  onFinish, 
+  onExit 
+}) => {
   const { user } = useAuth();
   const { addResult } = useStats();
   
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({});
-  const [timeLeft, setTimeLeft] = useState(EXAM_CONFIG.DURATION_MINUTES * 60);
+  const [timeLeft, setTimeLeft] = useState(duration * 60);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Iniciar novo exame ao montar componente com base na categoria
+    // Iniciar novo exame ao montar componente com base na categoria e configurações
     setIsLoading(true);
-    // Pequeno timeout para garantir que a UI mostra o loading state se a geração for pesada
     const timer = setTimeout(() => {
       const newQuestions = generateExam(categoryId);
-      setQuestions(newQuestions);
+      
+      // Ajustar número de questões se a categoria for específica
+      // O generateExam já deve retornar o pool correto, mas fazemos slice para garantir
+      const finalQuestions = newQuestions.slice(0, totalQuestions);
+
+      setQuestions(finalQuestions);
       setCurrentIndex(0);
       setAnswers({});
-      setTimeLeft(EXAM_CONFIG.DURATION_MINUTES * 60);
+      setTimeLeft(duration * 60);
       setIsLoading(false);
     }, 10);
     
     return () => clearTimeout(timer);
-  }, [categoryId]);
+  }, [categoryId, duration, totalQuestions]);
 
   const handleFinish = useCallback((isTimeout: boolean) => {
     const score = questions.reduce((acc, q, idx) => {
@@ -57,13 +70,19 @@ export const ExamView: React.FC<ExamViewProps> = ({ examTitle = "Exame TVDE", ca
       return acc;
     }, [] as MistakeRecord[]);
 
+    // Calcular aprovação com base numa percentagem fixa (ex: 90%) ou regra
+    // Regra base: Passa se errar menos de 3 em 30 (10%). 
+    const maxMistakes = Math.ceil(questions.length * 0.1); // Ex: 30 -> 3. 
+    // Nota: Oficialmente TVDE é 27/30. Código B é 27/30. 
+    const passed = score >= (questions.length - 3) && !isTimeout;
+
     const result: ExamResult = {
       id: generateUUID(),
       userName: user?.name || 'Anónimo',
       date: new Date().toISOString(),
       score,
       total: questions.length,
-      passed: score >= EXAM_CONFIG.PASS_SCORE && !isTimeout,
+      passed,
       isTimeout,
       mistakes
     };

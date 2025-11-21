@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useStats } from '../contexts/StatsContext';
@@ -133,7 +132,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onSelectCategory, onOpenSupp
                     <span className="text-xs font-bold uppercase">Seus Exames</span>
                  </div>
                  <div className="text-2xl font-black text-white">{stats.totalExams}</div>
-                 <div className="text-xs text-gray-400 mt-1">Realizados</div>
+                 <div className="text-xs text-gray-400 mt-1">Neste dispositivo</div>
               </div>
 
               {/* Personal Stat 2 */}
