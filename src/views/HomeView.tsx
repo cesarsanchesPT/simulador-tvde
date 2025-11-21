@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useStats } from '../contexts/StatsContext';
 import { AVAILABLE_EXAMS } from '../data/examRegistry';
 import { ExamCategory } from '../types';
-import { GiftIcon, Squares2X2Icon, BookOpenIcon, SpeakerWaveIcon, ChartBarIcon, HeartIcon, ChevronRightIcon } from '../components/Icons';
+import { GiftIcon, Squares2X2Icon, BookOpenIcon, SpeakerWaveIcon, ChartBarIcon, HeartIcon, ChevronRightIcon, LightBulbIcon, ArrowUpIcon, UserIcon, ClockIcon } from '../components/Icons';
 
 // Simple Icon Mapper
 const IconMap: Record<string, any> = {
@@ -16,12 +16,13 @@ const IconMap: Record<string, any> = {
 
 interface HomeViewProps {
   onSelectCategory: (category: ExamCategory) => void;
-  onOpenSupport?: () => void; // Optional prop for support
+  onOpenSupport?: () => void;
+  onOpenStudy?: () => void;
 }
 
-export const HomeView: React.FC<HomeViewProps> = ({ onSelectCategory, onOpenSupport }) => {
+export const HomeView: React.FC<HomeViewProps> = ({ onSelectCategory, onOpenSupport, onOpenStudy }) => {
   const { user, login, upgradeToPremium } = useAuth();
-  const { stats } = useStats();
+  const { stats, globalStats } = useStats();
   const [inputName, setInputName] = React.useState('');
 
   // TELA DE LOGIN SIMPLIFICADA
@@ -52,16 +53,13 @@ export const HomeView: React.FC<HomeViewProps> = ({ onSelectCategory, onOpenSupp
               Começar Agora
             </button>
           </div>
-          <p className="mt-6 text-xs text-gray-400">v2.0 • Lei 45/2018</p>
+          <p className="mt-6 text-xs text-gray-400">v2.1 • Lei 45/2018</p>
         </div>
       </div>
     );
   }
 
-  // Calculate dynamic stats based on user history
-  const passRate = stats.totalExams > 0 
-    ? Math.round((stats.examsPassed / stats.totalExams) * 100) 
-    : 0;
+  const hasRecommendation = stats.weakestTopic && stats.weakestTopic !== 'N/A';
 
   return (
     <div className="space-y-10 pb-12 animate-slide-up">
@@ -71,33 +69,47 @@ export const HomeView: React.FC<HomeViewProps> = ({ onSelectCategory, onOpenSupp
          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500 rounded-full blur-[100px] opacity-30 -mr-16 -mt-16"></div>
          <div className="absolute bottom-0 left-0 w-48 h-48 bg-purple-500 rounded-full blur-[80px] opacity-20 -ml-10 -mb-10"></div>
          
-         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+         <div className="relative z-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
            <div>
-             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-sm border border-white/10 text-xs font-medium text-indigo-200 mb-4">
-                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
-                Sistema Online
+             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-sm border border-white/10 text-xs font-medium text-green-300 mb-4 animate-pulse">
+                <span className="w-2 h-2 rounded-full bg-green-400"></span>
+                {globalStats.activeUsers} motoristas a estudar agora
              </div>
              <h1 className="text-4xl sm:text-5xl font-black mb-4 tracking-tight">
                Olá, <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 to-purple-300">{user.name}</span>
              </h1>
              <p className="text-gray-400 text-lg max-w-md leading-relaxed">
-               {stats.totalExams === 0 
-                  ? "Hoje é um ótimo dia para começar. Escolha uma categoria abaixo para iniciar o seu treino."
-                  : `Já realizou ${stats.totalExams} exames com uma média de ${stats.averageScore}%. Continue assim!`
-               }
+               Junte-se à comunidade. Já foram realizados <span className="text-white font-bold">{globalStats.totalExams.toLocaleString()}</span> exames simulados na nossa plataforma.
              </p>
            </div>
 
-           <div className="bg-white/5 backdrop-blur-md p-6 rounded-3xl border border-white/10 min-w-[240px]">
-              <div className="flex items-center gap-3 mb-4">
-                 <div className={`bg-opacity-20 p-2 rounded-lg ${passRate >= 50 ? 'bg-green-500' : 'bg-red-500'}`}>
-                    <ChartBarIcon className={`w-5 h-5 ${passRate >= 50 ? 'text-green-400' : 'text-red-400'}`} />
+           {/* Stats Grid - Responsive */}
+           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 w-full lg:w-auto">
+              {/* Global Stat 1 */}
+              <div className="bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10">
+                 <div className="flex items-center gap-2 mb-2 text-indigo-300">
+                    <ChartBarIcon className="w-4 h-4" />
+                    <span className="text-xs font-bold uppercase">Aprovação Global</span>
                  </div>
-                 <span className="text-sm font-bold text-gray-300 uppercase">Taxa Aprovação</span>
+                 <div className="text-2xl font-black text-white">{globalStats.passRate}%</div>
               </div>
-              <div className="text-4xl font-black text-white mb-1">{passRate}%</div>
-              <div className="text-xs text-gray-400">
-                {stats.totalExams} testes realizados
+
+              {/* Personal Stat 1 */}
+              <div className="bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10">
+                 <div className="flex items-center gap-2 mb-2 text-purple-300">
+                    <UserIcon className="w-4 h-4" />
+                    <span className="text-xs font-bold uppercase">Seus Exames</span>
+                 </div>
+                 <div className="text-2xl font-black text-white">{stats.totalExams}</div>
+              </div>
+
+              {/* Personal Stat 2 */}
+              <div className="bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10 col-span-2 sm:col-span-1">
+                 <div className="flex items-center gap-2 mb-2 text-green-300">
+                    <ClockIcon className="w-4 h-4" />
+                    <span className="text-xs font-bold uppercase">Sua Média</span>
+                 </div>
+                 <div className="text-2xl font-black text-white">{stats.averageScore}%</div>
               </div>
            </div>
          </div>
@@ -123,6 +135,28 @@ export const HomeView: React.FC<HomeViewProps> = ({ onSelectCategory, onOpenSupp
            </div>
          )}
       </div>
+
+      {/* Recommendation Card */}
+      {hasRecommendation && (
+         <div className="bg-orange-50 border border-orange-100 rounded-[2rem] p-6 flex flex-col sm:flex-row items-center gap-6 text-left animate-fade-in shadow-sm">
+            <div className="bg-orange-100 p-4 rounded-2xl text-orange-600 shrink-0">
+              <LightBulbIcon className="w-8 h-8" />
+            </div>
+            <div className="flex-1">
+              <h4 className="text-lg font-bold text-gray-900 mb-1">Recomendação de Estudo</h4>
+              <p className="text-gray-600">
+                Detetámos dificuldades frequentes no tema <span className="font-bold text-orange-700">{stats.weakestTopic}</span>. 
+                Recomendamos focar o estudo neste módulo para melhorar a sua média.
+              </p>
+            </div>
+            <button 
+              onClick={onOpenStudy}
+              className="whitespace-nowrap bg-white border-2 border-orange-100 text-orange-600 hover:bg-orange-50 hover:border-orange-200 px-6 py-3 rounded-xl font-bold text-sm transition-all flex items-center gap-2 shadow-sm"
+            >
+              Estudar Agora <ArrowUpIcon className="w-4 h-4 rotate-90" />
+            </button>
+         </div>
+      )}
 
       {/* Grid de Exames */}
       <div>

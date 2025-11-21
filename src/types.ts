@@ -1,3 +1,12 @@
+
+// Fix for Vercel/Vite build where process might be undefined in types
+declare var process: {
+  env: {
+    API_KEY: string;
+    [key: string]: string | undefined;
+  }
+};
+
 export type ExamMode = 'EXAM' | 'STUDY' | 'REVIEW';
 
 export enum AppView {
@@ -11,6 +20,13 @@ export enum AppView {
   INFO_MENU = 'INFO_MENU',
   INFO_DETAIL = 'INFO_DETAIL',
   FAQ_MENU = 'FAQ_MENU'
+}
+
+// --- ESTATÍSTICAS GLOBAIS (Simulação) ---
+export interface GlobalStats {
+  activeUsers: number;
+  totalExams: number;
+  passRate: number;
 }
 
 // --- TIPOS NOVOS (Motor Universal) ---
